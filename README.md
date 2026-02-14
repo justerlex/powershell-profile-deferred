@@ -10,8 +10,7 @@ A fork of [ChrisTitusTech's PowerShell profile](https://github.com/ChrisTitusTec
 
 Changes from upstream:
 - **No startup network calls** — removed the GitHub connectivity check and automatic update checks that add 200-500ms to every shell launch
-- **Load order optimized** — Oh My Posh and PSReadLine load first so the prompt appears fast, heavier modules follow
-- **Terminal-Icons loads reliably** — no background runspace issues
+- **Deferred loading** — Oh My Posh and PSReadLine load synchronously (~200ms), everything else (Terminal-Icons, zoxide, utility functions) defers via `PowerShell.OnIdle` so the prompt appears instantly
 - **PS 5.1 compatible Show-Help** — uses `Write-Host` colors instead of `$PSStyle`
 - **Manual updates only** — `Update-Profile` and `Update-PowerShell` are commands you run when you want, not things that surprise you on startup
 - **fastfetch** included in the setup
@@ -33,8 +32,7 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 | Dependency | What it does |
 |---|---|
 | [Oh My Posh](https://ohmyposh.dev/) | Prompt engine + Cobalt2 theme |
-| [CaskaydiaCove NF](https://github.com/ryanoasis/nerd-fonts) | Nerd Font (CTT default) |
-| [Meslo NF](https://github.com/ryanoasis/nerd-fonts) | Nerd Font (OMP recommended) |
+| [CaskaydiaCove NF](https://github.com/ryanoasis/nerd-fonts) | Nerd Font |
 | [Chocolatey](https://chocolatey.org/) | Package manager |
 | [Terminal-Icons](https://github.com/devblackops/Terminal-Icons) | File icons in `ls` output |
 | [zoxide](https://github.com/ajeetdsouza/zoxide) | Smarter `cd` |

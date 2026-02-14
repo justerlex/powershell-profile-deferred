@@ -64,13 +64,13 @@ Write-Host ""
 #  DEPENDENCY INSTALLATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$totalSteps = 8
+$totalSteps = 7
 
 # ── Oh My Posh ──
 Write-Host "[1/$totalSteps] Installing Oh My Posh..." -ForegroundColor Yellow
 try {
     winget install -e --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh
-    # Refresh PATH so oh-my-posh is available for Meslo font install below
+    # Refresh PATH so oh-my-posh is available immediately
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
     Write-Host "  Oh My Posh installed." -ForegroundColor Green
 } catch {
@@ -112,47 +112,8 @@ try {
     Write-Error "  Failed to install $($Config.FontDisplayName): $_"
 }
 
-# ── Nerd Fonts (Meslo — used by oh-my-posh docs, common choice) ──
-Write-Host "[3/$totalSteps] Installing Meslo Nerd Font..." -ForegroundColor Yellow
-try {
-    [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
-    $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
-
-    if ($fontFamilies -notcontains "MesloLGM Nerd Font") {
-        if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-            oh-my-posh font install meslo
-            Write-Host "  Meslo Nerd Font installed via Oh My Posh." -ForegroundColor Green
-        } else {
-            $mesloZipUrl = "https://github.com/ryanoasis/nerd-fonts/releases/download/v$($Config.FontVersion)/Meslo.zip"
-            $mesloZip = "$env:TEMP\Meslo.zip"
-            $mesloExtract = "$env:TEMP\Meslo"
-
-            Write-Host "  Downloading Meslo font archive..." -ForegroundColor DarkGray
-            $webClient = New-Object System.Net.WebClient
-            $webClient.DownloadFileAsync((New-Object System.Uri($mesloZipUrl)), $mesloZip)
-            while ($webClient.IsBusy) { Start-Sleep -Seconds 2 }
-
-            Expand-Archive -Path $mesloZip -DestinationPath $mesloExtract -Force
-            $destination = (New-Object -ComObject Shell.Application).Namespace(0x14)
-            Get-ChildItem -Path $mesloExtract -Recurse -Filter "*.ttf" | ForEach-Object {
-                if (-not (Test-Path "C:\Windows\Fonts\$($_.Name)")) {
-                    $destination.CopyHere($_.FullName, 0x10)
-                }
-            }
-
-            Remove-Item -Path $mesloExtract -Recurse -Force
-            Remove-Item -Path $mesloZip -Force
-            Write-Host "  Meslo Nerd Font installed." -ForegroundColor Green
-        }
-    } else {
-        Write-Host "  Meslo Nerd Font already installed." -ForegroundColor Green
-    }
-} catch {
-    Write-Error "  Failed to install Meslo Nerd Font: $_"
-}
-
 # ── Chocolatey ──
-Write-Host "[4/$totalSteps] Installing Chocolatey..." -ForegroundColor Yellow
+Write-Host "[3/$totalSteps] Installing Chocolatey..." -ForegroundColor Yellow
 try {
     if (Get-Command choco -ErrorAction SilentlyContinue) {
         Write-Host "  Chocolatey already installed." -ForegroundColor Green
@@ -167,7 +128,7 @@ try {
 }
 
 # ── Terminal-Icons ──
-Write-Host "[5/$totalSteps] Installing Terminal-Icons module..." -ForegroundColor Yellow
+Write-Host "[4/$totalSteps] Installing Terminal-Icons module..." -ForegroundColor Yellow
 try {
     if (Get-Module -ListAvailable -Name Terminal-Icons) {
         Write-Host "  Terminal-Icons already installed." -ForegroundColor Green
@@ -180,7 +141,7 @@ try {
 }
 
 # ── zoxide ──
-Write-Host "[6/$totalSteps] Installing zoxide..." -ForegroundColor Yellow
+Write-Host "[5/$totalSteps] Installing zoxide..." -ForegroundColor Yellow
 try {
     if (Get-Command zoxide -ErrorAction SilentlyContinue) {
         Write-Host "  zoxide already installed." -ForegroundColor Green
@@ -193,7 +154,7 @@ try {
 }
 
 # ── fzf + PSFzf ──
-Write-Host "[7/$totalSteps] Installing fzf + PSFzf module..." -ForegroundColor Yellow
+Write-Host "[6/$totalSteps] Installing fzf + PSFzf module..." -ForegroundColor Yellow
 try {
     if (Get-Command fzf -ErrorAction SilentlyContinue) {
         Write-Host "  fzf already installed." -ForegroundColor Green
@@ -216,7 +177,7 @@ try {
 }
 
 # ── fastfetch ──
-Write-Host "[8/$totalSteps] Installing fastfetch..." -ForegroundColor Yellow
+Write-Host "[7/$totalSteps] Installing fastfetch..." -ForegroundColor Yellow
 try {
     if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
         Write-Host "  fastfetch already installed." -ForegroundColor Green
@@ -336,7 +297,7 @@ Write-Host "    Microsoft.PowerShell_profile.ps1  <- profile" -ForegroundColor D
 Write-Host "    cobalt2.omp.json                  <- Oh My Posh theme" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Dependencies:" -ForegroundColor White
-Write-Host "    Oh My Posh, CaskaydiaCove NF, Meslo NF, Chocolatey," -ForegroundColor DarkGray
+Write-Host "    Oh My Posh, CaskaydiaCove NF, Chocolatey," -ForegroundColor DarkGray
 Write-Host "    Terminal-Icons, zoxide, fzf, PSFzf, fastfetch" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Commands:" -ForegroundColor White
@@ -346,7 +307,7 @@ Write-Host "    Show-Help         - list all available commands" -ForegroundColo
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor White
 Write-Host "    1. Restart your terminal" -ForegroundColor DarkGray
-Write-Host "    2. Set font to 'MesloLGM Nerd Font' or 'CaskaydiaCove NF'" -ForegroundColor DarkGray
+Write-Host "    2. Set font to 'CaskaydiaCove NF' in your terminal settings" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
