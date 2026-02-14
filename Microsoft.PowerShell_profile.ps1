@@ -42,16 +42,16 @@ if ($host.Name -eq 'ConsoleHost') {
         HistoryNoDuplicates           = $true
         HistorySearchCursorMovesToEnd = $true
         Colors                        = @{
-            Command   = '#87CEEB'
-            Parameter = '#98FB98'
-            Operator  = '#FFB6C1'
-            Variable  = '#DDA0DD'
-            String    = '#FFDAB9'
-            Number    = '#B0E0E6'
-            Type      = '#F0E68C'
-            Comment   = '#D3D3D3'
-            Keyword   = '#8367c7'
-            Error     = '#FF6347'
+            Command   = '#87CEEB'   # SkyBlue
+            Parameter = '#98FB98'   # PaleGreen
+            Operator  = '#FFB6C1'   # LightPink
+            Variable  = '#DDA0DD'   # Plum
+            String    = '#FFDAB9'   # PeachPuff
+            Number    = '#B0E0E6'   # PowderBlue
+            Type      = '#F0E68C'   # Khaki
+            Comment   = '#D3D3D3'   # LightGray
+            Keyword   = '#8367c7'   # Violet
+            Error     = '#FF6347'   # Tomato
         }
         BellStyle                     = 'None'
     }
@@ -94,36 +94,31 @@ if ($host.Name -eq 'ConsoleHost') {
 $global:ProfileStopwatch.Stop()
 $syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
 
-# Show boot time on the same line as the PowerShell version banner.
-# Falls back to a separate line if cursor manipulation isn't supported.
+# Show boot time inline on the PS version banner line, or below it as fallback
 $bootStatusText = "boot ${syncMs}ms | Type 'Show-Help' for commands"
-$bootStatusShown = $false
+$bootInline = $false
 try {
     $rawUi = $Host.UI.RawUI
     $cursor = $rawUi.CursorPosition
     $targetY = $cursor.Y - 1
     $targetX = $rawUi.WindowSize.Width - $bootStatusText.Length - 1
-
     if ($targetY -ge 0 -and $targetX -ge 0) {
         $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
-        Write-Host "boot " -NoNewline -ForegroundColor Cyan
-        Write-Host "${syncMs}ms" -NoNewline -ForegroundColor DarkGray
-        Write-Host " | " -NoNewline -ForegroundColor DarkGray
-        Write-Host "Type " -NoNewline -ForegroundColor DarkGray
-        Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
-        Write-Host " for commands" -NoNewline -ForegroundColor DarkGray
-        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates(0, $cursor.Y)
-        $bootStatusShown = $true
+        $bootInline = $true
     }
 } catch { }
 
-if (-not $bootStatusShown) {
-    Write-Host "  boot " -NoNewline -ForegroundColor Cyan
-    Write-Host "${syncMs}ms" -NoNewline -ForegroundColor DarkGray
-    Write-Host " | " -NoNewline -ForegroundColor DarkGray
-    Write-Host "Type " -NoNewline -ForegroundColor DarkGray
-    Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
-    Write-Host " for commands" -ForegroundColor DarkGray
+if (-not $bootInline) { Write-Host "  " -NoNewline }
+Write-Host "boot " -NoNewline -ForegroundColor Cyan
+Write-Host "${syncMs}ms" -NoNewline -ForegroundColor DarkGray
+Write-Host " | " -NoNewline -ForegroundColor DarkGray
+Write-Host "Type " -NoNewline -ForegroundColor DarkGray
+Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
+Write-Host " for commands" -NoNewline -ForegroundColor DarkGray
+if ($bootInline) {
+    $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates(0, $cursor.Y)
+} else {
+    Write-Host
 }
 
 $global:CttProfilePath = Join-Path (Split-Path $PROFILE) "ctt-profile.ps1"
@@ -133,8 +128,25 @@ $Deferred = {
     # Overrides: must exist before sourcing CTT so its Get-Command checks find them
     function Get-Theme_Override { }             # oh-my-posh already loaded
     function Set-PredictionSource_Override { }   # PSReadLine already configured
-    function Update-Profile_Override {          # prevent CTT from overwriting our wrapper
-        Write-Host "Use 'Update-Wrapper' to update this profile." -ForegroundColor Yellow
+
+    # Redirect Update-Profile to update ctt-profile.ps1 instead of $PROFILE (our wrapper)
+    function Update-Profile_Override {
+        try {
+            $url = "$repo_root/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
+            $oldhash = Get-FileHash $global:CttProfilePath
+            Invoke-RestMethod $url -OutFile "$env:temp/Microsoft.PowerShell_profile.ps1"
+            $newhash = Get-FileHash "$env:temp/Microsoft.PowerShell_profile.ps1"
+            if ($newhash.Hash -ne $oldhash.Hash) {
+                Copy-Item -Path "$env:temp/Microsoft.PowerShell_profile.ps1" -Destination $global:CttProfilePath -Force
+                Write-Host "CTT profile updated. Restart your shell to reflect changes." -ForegroundColor Magenta
+            } else {
+                Write-Host "CTT profile is up to date." -ForegroundColor Green
+            }
+        } catch {
+            Write-Error "Unable to check for CTT profile updates: $_"
+        } finally {
+            Remove-Item "$env:temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
+        }
     }
 
     function Update-Wrapper {
@@ -156,9 +168,8 @@ $Deferred = {
         }
     }
 
-    # Source CTT profile with Write-Host suppressed to prevent background output
-    # stomping the terminal. Functions defined during sourcing resolve Write-Host
-    # at call time, so they'll find the real cmdlet when invoked later.
+    # Shadow Write-Host during CTT sourcing to suppress background output.
+    # Functions defined inside CTT resolve Write-Host at call time, not definition time.
     if (Test-Path $global:CttProfilePath) {
         try {
             function Write-Host { }
