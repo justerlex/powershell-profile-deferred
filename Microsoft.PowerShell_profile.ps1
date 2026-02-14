@@ -112,7 +112,7 @@ $syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
 Write-Host "  ⚡ " -NoNewline -ForegroundColor Cyan
 Write-Host "$syncMs" -NoNewline -ForegroundColor White
 Write-Host "ms" -NoNewline -ForegroundColor DarkGray
-Write-Host " / " -NoNewline -ForegroundColor DarkGray
+Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
 Write-Host "Type " -NoNewline -ForegroundColor DarkGray
 Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
 Write-Host " for commands" -ForegroundColor DarkGray
