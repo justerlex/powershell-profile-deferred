@@ -243,57 +243,64 @@ $GlobalState = [psmoduleinfo]::new($false)
 $GlobalState.SessionState = $ExecutionContext.SessionState
 
 # ── Launch ──
-$Wrapper = {
-    # The 200ms sleep is NOT optional. Without it you get:
-    #   - Occasional crashes
-    #   - Prompt not rendering
-    #   - Syntax highlighting missing
-    # This is a PSReadLine timing issue. 200ms is generous but non-blocking (background thread).
-    Start-Sleep -Milliseconds 200
-
-    . $GlobalState { . $Deferred; Remove-Variable Deferred }
-}
-try {
-    # Create a runspace attached to $Host (needed for Write-Host etc. in deferred code)
-    $Runspace = [runspacefactory]::CreateRunspace($Host)
-    $Powershell = [powershell]::Create($Runspace)
-    $Runspace.Open()
-    $Runspace.SessionStateProxy.PSVariable.Set('GlobalState', $GlobalState)
-
-    # ── ArgumentCompleter Reflection Hack ──
-    # Without this, Register-ArgumentCompleter calls in CTT's profile (git, npm, deno, dotnet)
-    # would silently fail because completers are stored on the ExecutionContext, not SessionState.
-    $Private = [Reflection.BindingFlags]'Instance, NonPublic'
-    $ContextField = [Management.Automation.EngineIntrinsics].GetField('_context', $Private)
-    $Context = $ContextField.GetValue($ExecutionContext)
-
-    $ContextCACProperty = $Context.GetType().GetProperty('CustomArgumentCompleters', $Private)
-    $ContextNACProperty = $Context.GetType().GetProperty('NativeArgumentCompleters', $Private)
-    $CAC = $ContextCACProperty.GetValue($Context)
-    $NAC = $ContextNACProperty.GetValue($Context)
-
-    if ($null -eq $CAC) {
-        $CAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
-        $ContextCACProperty.SetValue($Context, $CAC)
-    }
-    if ($null -eq $NAC) {
-        $NAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
-        $ContextNACProperty.SetValue($Context, $NAC)
-    }
-
-    # Wire the runspace's ExecutionContext to share the same ArgumentCompleter dictionaries
-    $RSEngineField = $Runspace.GetType().GetField('_engine', $Private)
-    $RSEngine = $RSEngineField.GetValue($Runspace)
-    $EngineContextField = $RSEngine.GetType().GetFields($Private) | Where-Object { $_.FieldType.Name -eq 'ExecutionContext' }
-    $RSContext = $EngineContextField.GetValue($RSEngine)
-
-    $ContextCACProperty.SetValue($RSContext, $CAC)
-    $ContextNACProperty.SetValue($RSContext, $NAC)
-
-    $null = $Powershell.AddScript($Wrapper.ToString()).BeginInvoke()
-} catch {
-    # Host/runspace mismatch fallback: load directly so commands are always available.
+# IntelliJ's JediTerm host creates runspaces successfully but the background
+# session-state injection silently fails. Detect it and load synchronously.
+if ($env:TERMINAL_EMULATOR -eq 'JetBrains-JediTerm') {
     . $Deferred
+    Remove-Variable Deferred
+} else {
+    $Wrapper = {
+        # The 200ms sleep is NOT optional. Without it you get:
+        #   - Occasional crashes
+        #   - Prompt not rendering
+        #   - Syntax highlighting missing
+        # This is a PSReadLine timing issue. 200ms is generous but non-blocking (background thread).
+        Start-Sleep -Milliseconds 200
+
+        . $GlobalState { . $Deferred; Remove-Variable Deferred }
+    }
+    try {
+        # Create a runspace attached to $Host (needed for Write-Host etc. in deferred code)
+        $Runspace = [runspacefactory]::CreateRunspace($Host)
+        $Powershell = [powershell]::Create($Runspace)
+        $Runspace.Open()
+        $Runspace.SessionStateProxy.PSVariable.Set('GlobalState', $GlobalState)
+
+        # ── ArgumentCompleter Reflection Hack ──
+        # Without this, Register-ArgumentCompleter calls in CTT's profile (git, npm, deno, dotnet)
+        # would silently fail because completers are stored on the ExecutionContext, not SessionState.
+        $Private = [Reflection.BindingFlags]'Instance, NonPublic'
+        $ContextField = [Management.Automation.EngineIntrinsics].GetField('_context', $Private)
+        $Context = $ContextField.GetValue($ExecutionContext)
+
+        $ContextCACProperty = $Context.GetType().GetProperty('CustomArgumentCompleters', $Private)
+        $ContextNACProperty = $Context.GetType().GetProperty('NativeArgumentCompleters', $Private)
+        $CAC = $ContextCACProperty.GetValue($Context)
+        $NAC = $ContextNACProperty.GetValue($Context)
+
+        if ($null -eq $CAC) {
+            $CAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
+            $ContextCACProperty.SetValue($Context, $CAC)
+        }
+        if ($null -eq $NAC) {
+            $NAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
+            $ContextNACProperty.SetValue($Context, $NAC)
+        }
+
+        # Wire the runspace's ExecutionContext to share the same ArgumentCompleter dictionaries
+        $RSEngineField = $Runspace.GetType().GetField('_engine', $Private)
+        $RSEngine = $RSEngineField.GetValue($Runspace)
+        $EngineContextField = $RSEngine.GetType().GetFields($Private) | Where-Object { $_.FieldType.Name -eq 'ExecutionContext' }
+        $RSContext = $EngineContextField.GetValue($RSEngine)
+
+        $ContextCACProperty.SetValue($RSContext, $CAC)
+        $ContextNACProperty.SetValue($RSContext, $NAC)
+
+        $null = $Powershell.AddScript($Wrapper.ToString()).BeginInvoke()
+    } catch {
+        # Host/runspace mismatch fallback: load directly so commands are always available.
+        . $Deferred
+    }
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
