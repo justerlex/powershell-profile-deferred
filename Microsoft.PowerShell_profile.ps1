@@ -150,22 +150,7 @@ $Deferred = {
     }
 
     function Update-Wrapper {
-        try {
-            $url = "https://raw.githubusercontent.com/justerlex/powershell-profile-deferred/main/Microsoft.PowerShell_profile.ps1"
-            $oldhash = Get-FileHash $PROFILE
-            Invoke-RestMethod $url -OutFile "$env:temp/deferred-wrapper.ps1"
-            $newhash = Get-FileHash "$env:temp/deferred-wrapper.ps1"
-            if ($newhash.Hash -ne $oldhash.Hash) {
-                Copy-Item -Path "$env:temp/deferred-wrapper.ps1" -Destination $PROFILE -Force
-                Write-Host "Deferred wrapper updated. Restart your shell to reflect changes." -ForegroundColor Magenta
-            } else {
-                Write-Host "Deferred wrapper is up to date." -ForegroundColor Green
-            }
-        } catch {
-            Write-Error "Unable to check for wrapper updates: $_"
-        } finally {
-            Remove-Item "$env:temp/deferred-wrapper.ps1" -ErrorAction SilentlyContinue
-        }
+        irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
     }
 
     # Shadow Write-Host during CTT sourcing to suppress background output.
@@ -191,7 +176,7 @@ $Deferred = {
 
     # Title: ... -> * -> clean
     $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' \.\.\.$', ''
-    $Host.UI.RawUI.WindowTitle = "$currentTitle *"
+    $Host.UI.RawUI.WindowTitle = "$currentTitle ok"
     Start-Sleep -Seconds 1
     $Host.UI.RawUI.WindowTitle = $currentTitle
 }
