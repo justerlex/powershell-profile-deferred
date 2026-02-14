@@ -140,7 +140,7 @@ try {
 
 if (-not $bootStatusShown) {
     Write-Host "  ⚡ " -NoNewline -ForegroundColor Cyan
-    Write-Host "$syncMs" -NoNewline -ForegroundColor White
+    Write-Host "$syncMs" -NoNewline -ForegroundColor Gray
     Write-Host "ms" -NoNewline -ForegroundColor DarkGray
     Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
     Write-Host "Type " -NoNewline -ForegroundColor DarkGray
