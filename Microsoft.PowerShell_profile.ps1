@@ -20,7 +20,7 @@ if ([bool]([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsSystem) 
 
 # Window title
 $adminSuffix = if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { " [ADMIN]" } else { "" }
-$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix" -f $PSVersionTable.PSVersion.ToString()
+$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix ..." -f $PSVersionTable.PSVersion.ToString()
 
 # ── Oh My Posh ──
 $localThemePath = Join-Path (Split-Path $PROFILE) "cobalt2.omp.json"
@@ -341,4 +341,10 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
     # Source user customizations if present
     $customProfile = Join-Path (Split-Path $PROFILE) "profile.ps1"
     if (Test-Path $customProfile) { . $customProfile }
+
+    # Title: ... -> ok -> clean
+    $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' \.\.\.$', ''
+    $Host.UI.RawUI.WindowTitle = "$currentTitle ok"
+    Start-Sleep -Milliseconds 500
+    $Host.UI.RawUI.WindowTitle = $currentTitle
 }
