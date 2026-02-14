@@ -4,97 +4,78 @@
 ### USAGE (elevated PowerShell):
 ###   irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ###
-### WHAT THIS DOES:
-###   1. Installs all dependencies (Oh My Posh, Nerd Fonts, Chocolatey, fzf, Terminal-Icons, zoxide, fastfetch)
-###   2. Downloads the profile as your active PowerShell profile
-###   3. Patches BOTH PowerShell 7+ and Windows PowerShell 5.1 directories
-###   4. Backs up any existing profiles before touching anything
+### WHAT IT DOES:
+###   1. Installs dependencies (Oh My Posh, Nerd Font, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch)
+###   2. Downloads the profile into both PowerShell 7+ and 5.1 directories
+###   3. Injects the Flexoki color scheme into Windows Terminal
+###   4. Backs up existing profiles before overwriting
 ###
-### SAFE TO RE-RUN: Detects existing installs and updates in place.
+### Safe to re-run — skips anything already installed.
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  CONFIGURATION — change these if you fork the repo
+#  CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $Config = @{
-    # Where the profile lives (link to YOUR repo)
     RepoRoot        = "https://raw.githubusercontent.com/justerlex/powershell-profile-deferred/main"
-
-    # Oh My Posh theme
     OmpThemeName    = "cobalt2"
     OmpThemeUrl     = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/cobalt2.omp.json"
-
-    # Nerd Fonts — installed via zip download (doesn't need OMP in PATH yet)
     FontName        = "CascadiaCode"
     FontDisplayName = "CaskaydiaCove NF"
     FontVersion     = "3.2.1"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PREFLIGHT CHECKS
+#  PREFLIGHT
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Must run elevated — font install + choco need admin
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Warning "Please run this script as an Administrator!"
     return
 }
 
-function Test-InternetConnection {
-    try {
-        Test-Connection -ComputerName www.google.com -Count 1 -ErrorAction Stop | Out-Null
-        return $true
-    } catch {
-        Write-Warning "Internet connection is required but not available."
-        return $false
-    }
-}
-
-if (-not (Test-InternetConnection)) {
+try {
+    Test-Connection -ComputerName github.com -Count 1 -ErrorAction Stop | Out-Null
+} catch {
+    Write-Warning "Internet connection is required but not available."
     return
 }
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  PowerShell Profile — Setup                          " -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "  PowerShell Profile Setup" -ForegroundColor Cyan
+Write-Host "  ========================" -ForegroundColor DarkGray
 Write-Host ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  DEPENDENCY INSTALLATION
+#  DEPENDENCIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $totalSteps = 7
 
-# ── Oh My Posh ──
-Write-Host "[1/$totalSteps] Installing Oh My Posh..." -ForegroundColor Yellow
+# [1] Oh My Posh
+Write-Host "[1/$totalSteps] Oh My Posh..." -ForegroundColor Yellow
 try {
     winget install -e --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh
-    # Refresh PATH so oh-my-posh is available immediately
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-    Write-Host "  Oh My Posh installed." -ForegroundColor Green
+    Write-Host "  Done." -ForegroundColor Green
 } catch {
-    Write-Error "  Failed to install Oh My Posh: $_"
+    Write-Error "  Failed: $_"
 }
 
-# ── Nerd Fonts (CaskaydiaCove — CTT's default) ──
-Write-Host "[2/$totalSteps] Installing CaskaydiaCove Nerd Font..." -ForegroundColor Yellow
+# [2] CaskaydiaCove Nerd Font
+Write-Host "[2/$totalSteps] CaskaydiaCove Nerd Font..." -ForegroundColor Yellow
 try {
     [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
     $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
 
     if ($fontFamilies -notcontains $Config.FontDisplayName) {
         $fontZipUrl = "https://github.com/ryanoasis/nerd-fonts/releases/download/v$($Config.FontVersion)/$($Config.FontName).zip"
-        $zipFilePath = "$env:TEMP\$($Config.FontName).zip"
+        $zipPath = "$env:TEMP\$($Config.FontName).zip"
         $extractPath = "$env:TEMP\$($Config.FontName)"
 
-        Write-Host "  Downloading font archive..." -ForegroundColor DarkGray
-        $webClient = New-Object System.Net.WebClient
-        $webClient.DownloadFileAsync((New-Object System.Uri($fontZipUrl)), $zipFilePath)
-        while ($webClient.IsBusy) { Start-Sleep -Seconds 2 }
+        Invoke-WebRequest -Uri $fontZipUrl -OutFile $zipPath
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
-        Write-Host "  Extracting and installing fonts..." -ForegroundColor DarkGray
-        Expand-Archive -Path $zipFilePath -DestinationPath $extractPath -Force
         $destination = (New-Object -ComObject Shell.Application).Namespace(0x14)
         Get-ChildItem -Path $extractPath -Recurse -Filter "*.ttf" | ForEach-Object {
             if (-not (Test-Path "C:\Windows\Fonts\$($_.Name)")) {
@@ -102,177 +83,139 @@ try {
             }
         }
 
-        Remove-Item -Path $extractPath -Recurse -Force
-        Remove-Item -Path $zipFilePath -Force
-        Write-Host "  $($Config.FontDisplayName) installed." -ForegroundColor Green
+        Remove-Item $extractPath -Recurse -Force
+        Remove-Item $zipPath -Force
+        Write-Host "  Done." -ForegroundColor Green
     } else {
-        Write-Host "  $($Config.FontDisplayName) already installed." -ForegroundColor Green
+        Write-Host "  Already installed." -ForegroundColor Green
     }
 } catch {
-    Write-Error "  Failed to install $($Config.FontDisplayName): $_"
+    Write-Error "  Failed: $_"
 }
 
-# ── Chocolatey ──
-Write-Host "[3/$totalSteps] Installing Chocolatey..." -ForegroundColor Yellow
+# [3] Chocolatey
+Write-Host "[3/$totalSteps] Chocolatey..." -ForegroundColor Yellow
 try {
     if (Get-Command choco -ErrorAction SilentlyContinue) {
-        Write-Host "  Chocolatey already installed." -ForegroundColor Green
+        Write-Host "  Already installed." -ForegroundColor Green
     } else {
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
         Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        Write-Host "  Chocolatey installed." -ForegroundColor Green
+        Write-Host "  Done." -ForegroundColor Green
     }
 } catch {
-    Write-Error "  Failed to install Chocolatey: $_"
+    Write-Error "  Failed: $_"
 }
 
-# ── Terminal-Icons ──
-Write-Host "[4/$totalSteps] Installing Terminal-Icons module..." -ForegroundColor Yellow
+# [4] Terminal-Icons
+Write-Host "[4/$totalSteps] Terminal-Icons..." -ForegroundColor Yellow
 try {
     if (Get-Module -ListAvailable -Name Terminal-Icons) {
-        Write-Host "  Terminal-Icons already installed." -ForegroundColor Green
+        Write-Host "  Already installed." -ForegroundColor Green
     } else {
         Install-Module -Name Terminal-Icons -Repository PSGallery -Force -SkipPublisherCheck
-        Write-Host "  Terminal-Icons installed." -ForegroundColor Green
+        Write-Host "  Done." -ForegroundColor Green
     }
 } catch {
-    Write-Error "  Failed to install Terminal-Icons: $_"
+    Write-Error "  Failed: $_"
 }
 
-# ── zoxide ──
-Write-Host "[5/$totalSteps] Installing zoxide..." -ForegroundColor Yellow
+# [5] zoxide
+Write-Host "[5/$totalSteps] zoxide..." -ForegroundColor Yellow
 try {
     if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-        Write-Host "  zoxide already installed." -ForegroundColor Green
+        Write-Host "  Already installed." -ForegroundColor Green
     } else {
         winget install -e --accept-source-agreements --accept-package-agreements ajeetdsouza.zoxide
-        Write-Host "  zoxide installed." -ForegroundColor Green
+        Write-Host "  Done." -ForegroundColor Green
     }
 } catch {
-    Write-Error "  Failed to install zoxide: $_"
+    Write-Error "  Failed: $_"
 }
 
-# ── fzf + PSFzf ──
-Write-Host "[6/$totalSteps] Installing fzf + PSFzf module..." -ForegroundColor Yellow
+# [6] fzf + PSFzf
+Write-Host "[6/$totalSteps] fzf + PSFzf..." -ForegroundColor Yellow
 try {
-    if (Get-Command fzf -ErrorAction SilentlyContinue) {
-        Write-Host "  fzf already installed." -ForegroundColor Green
-    } else {
+    if (-not (Get-Command fzf -ErrorAction SilentlyContinue)) {
         winget install -e --accept-source-agreements --accept-package-agreements junegunn.fzf
-        Write-Host "  fzf installed." -ForegroundColor Green
     }
-} catch {
-    Write-Error "  Failed to install fzf: $_"
-}
-try {
-    if (Get-Module -ListAvailable -Name PSFzf) {
-        Write-Host "  PSFzf module already installed." -ForegroundColor Green
-    } else {
+    if (-not (Get-Module -ListAvailable -Name PSFzf)) {
         Install-Module -Name PSFzf -Repository PSGallery -Force -SkipPublisherCheck
-        Write-Host "  PSFzf module installed." -ForegroundColor Green
     }
+    Write-Host "  Done." -ForegroundColor Green
 } catch {
-    Write-Error "  Failed to install PSFzf module: $_"
+    Write-Error "  Failed: $_"
 }
 
-# ── fastfetch ──
-Write-Host "[7/$totalSteps] Installing fastfetch..." -ForegroundColor Yellow
+# [7] fastfetch
+Write-Host "[7/$totalSteps] fastfetch..." -ForegroundColor Yellow
 try {
     if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
-        Write-Host "  fastfetch already installed." -ForegroundColor Green
+        Write-Host "  Already installed." -ForegroundColor Green
     } else {
         winget install -e --accept-source-agreements --accept-package-agreements Fastfetch-cli.Fastfetch
-        Write-Host "  fastfetch installed." -ForegroundColor Green
+        Write-Host "  Done." -ForegroundColor Green
     }
 } catch {
-    Write-Error "  Failed to install fastfetch: $_"
+    Write-Error "  Failed: $_"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PROFILE PATCHING
+#  PROFILE
 # ═══════════════════════════════════════════════════════════════════════════════
 
 function Install-Profile {
-    param(
-        [string]$ProfileDir,
-        [string]$Edition
-    )
+    param([string]$ProfileDir, [string]$Edition)
 
     Write-Host ""
-    Write-Host "Patching $Edition profile in [$ProfileDir]..." -ForegroundColor Cyan
+    Write-Host "Patching $Edition [$ProfileDir]..." -ForegroundColor Cyan
 
-    # Create directory if it doesn't exist
     if (-not (Test-Path $ProfileDir)) {
         New-Item -Path $ProfileDir -ItemType Directory -Force | Out-Null
-        Write-Host "  Created profile directory." -ForegroundColor DarkGray
     }
 
     $profileFile = Join-Path $ProfileDir "Microsoft.PowerShell_profile.ps1"
     $backupFile  = Join-Path $ProfileDir "oldprofile.ps1"
 
-    # ── Detect what's currently installed ──
     if (Test-Path $profileFile) {
-        $existingContent = Get-Content $profileFile -Raw -ErrorAction SilentlyContinue
+        $content = Get-Content $profileFile -Raw -ErrorAction SilentlyContinue
 
-        if ($existingContent -match "Fork of ChrisTitusTech/powershell-profile") {
-            # Our fork already — update in place
-            Write-Host "  Found existing fork profile — updating." -ForegroundColor DarkGray
-
-        } elseif ($existingContent -match "Deferred CTT Profile Wrapper") {
-            # Old wrapper version — back it up, clean install
-            Write-Host "  Found old wrapper profile — backing up to [$backupFile]" -ForegroundColor DarkGray
-            Copy-Item -Path $profileFile -Destination $backupFile -Force
-            # Also clean up leftover ctt-profile.ps1
-            $cttFile = Join-Path $ProfileDir "ctt-profile.ps1"
-            if (Test-Path $cttFile) {
-                Remove-Item -Path $cttFile -Force
-                Write-Host "  Removed leftover ctt-profile.ps1" -ForegroundColor DarkGray
-            }
-
-        } elseif ($existingContent -match "DO NOT MODIFY THIS FILE\. THIS FILE IS HASHED") {
-            # Unpatched CTT profile — back it up
-            Write-Host "  Found existing CTT profile — backing up to [$backupFile]" -ForegroundColor DarkGray
-            Copy-Item -Path $profileFile -Destination $backupFile -Force
-
+        if ($content -match "Fork of ChrisTitusTech/powershell-profile") {
+            Write-Host "  Updating existing fork profile." -ForegroundColor DarkGray
         } else {
-            # Some other profile — back it up
+            # Back up anything else (old wrapper, raw CTT, or unknown profile)
             Write-Host "  Backing up existing profile to [$backupFile]" -ForegroundColor DarkGray
             Copy-Item -Path $profileFile -Destination $backupFile -Force
+
+            # Clean up old wrapper artifacts
+            $cttFile = Join-Path $ProfileDir "ctt-profile.ps1"
+            if (Test-Path $cttFile) {
+                Remove-Item $cttFile -Force
+                Write-Host "  Removed leftover ctt-profile.ps1" -ForegroundColor DarkGray
+            }
         }
-    } else {
-        Write-Host "  No existing profile found — fresh install." -ForegroundColor DarkGray
     }
 
-    # ── Download the profile ──
-    Write-Host "  Downloading profile..." -ForegroundColor DarkGray
     try {
-        $profileUrl = "$($Config.RepoRoot)/Microsoft.PowerShell_profile.ps1"
-        Invoke-RestMethod $profileUrl -OutFile $profileFile
-        Write-Host "  Profile installed at [$profileFile]" -ForegroundColor Green
+        Invoke-RestMethod "$($Config.RepoRoot)/Microsoft.PowerShell_profile.ps1" -OutFile $profileFile
+        Write-Host "  Profile installed." -ForegroundColor Green
     } catch {
         Write-Error "  Failed to download profile: $_"
         return
     }
 
-    # ── Download Oh My Posh theme ──
     $themeFile = Join-Path $ProfileDir "$($Config.OmpThemeName).omp.json"
     if (-not (Test-Path $themeFile)) {
-        Write-Host "  Downloading Oh My Posh theme..." -ForegroundColor DarkGray
         try {
             Invoke-RestMethod -Uri $Config.OmpThemeUrl -OutFile $themeFile
-            Write-Host "  Theme saved to [$themeFile]" -ForegroundColor Green
+            Write-Host "  Theme installed." -ForegroundColor Green
         } catch {
-            Write-Warning "  Failed to download theme — oh-my-posh will fall back to remote."
+            Write-Warning "  Theme download failed — OMP will use remote fallback."
         }
-    } else {
-        Write-Host "  Oh My Posh theme already present." -ForegroundColor Green
     }
-
-    Write-Host "  $Edition profile patched." -ForegroundColor Green
 }
 
-# ── Patch both PowerShell editions ──
 $coreDir    = "$env:USERPROFILE\Documents\PowerShell"
 $desktopDir = "$env:USERPROFILE\Documents\WindowsPowerShell"
 
@@ -280,86 +223,66 @@ Install-Profile -ProfileDir $coreDir    -Edition "PowerShell 7+"
 Install-Profile -ProfileDir $desktopDir -Edition "Windows PowerShell 5.1"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  WINDOWS TERMINAL — inject Flexoki color scheme + set as default
+#  WINDOWS TERMINAL — Flexoki color scheme
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $FlexokiScheme = @{
-    background          = "#100F0F"
-    black               = "#100F0F"
-    blue                = "#205EA6"
-    brightBlack         = "#575653"
-    brightBlue          = "#4385BE"
-    brightCyan          = "#3AA99F"
-    brightGreen         = "#879A39"
-    brightPurple        = "#8B7EC8"
-    brightRed           = "#D14D41"
-    brightWhite         = "#FFFCF0"
-    brightYellow        = "#D0A215"
-    cursorColor         = "#DAD8CE"
-    cyan                = "#24837B"
-    foreground          = "#E6E4D9"
-    green               = "#66800B"
-    name                = "Flexoki"
-    purple              = "#5E409D"
-    red                 = "#AF3029"
-    selectionBackground = "#CECDC3"
-    white               = "#F2F0E5"
-    yellow              = "#C19C00"
+    name = "Flexoki"; background = "#100F0F"; foreground = "#E6E4D9"
+    black = "#100F0F"; red = "#AF3029"; green = "#66800B"; yellow = "#C19C00"
+    blue = "#205EA6"; purple = "#5E409D"; cyan = "#24837B"; white = "#F2F0E5"
+    brightBlack = "#575653"; brightRed = "#D14D41"; brightGreen = "#879A39"; brightYellow = "#D0A215"
+    brightBlue = "#4385BE"; brightPurple = "#8B7EC8"; brightCyan = "#3AA99F"; brightWhite = "#FFFCF0"
+    cursorColor = "#DAD8CE"; selectionBackground = "#CECDC3"
 }
 
-# All known Windows Terminal settings.json locations
-$wtSettingsPaths = @(
+$wtPaths = @(
     "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
     "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json"
     "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json"
 )
 
-$patchedAny = $false
-foreach ($wtPath in $wtSettingsPaths) {
+$patchedWT = $false
+foreach ($wtPath in $wtPaths) {
     if (-not (Test-Path $wtPath)) { continue }
 
     Write-Host ""
-    Write-Host "Patching Windows Terminal at [$wtPath]..." -ForegroundColor Cyan
-
+    Write-Host "Patching Windows Terminal [$wtPath]..." -ForegroundColor Cyan
     try {
-        $wtJson = Get-Content $wtPath -Raw | ConvertFrom-Json
+        $wt = Get-Content $wtPath -Raw | ConvertFrom-Json
 
-        # Ensure schemes array exists
-        if (-not $wtJson.schemes) {
-            $wtJson | Add-Member -MemberType NoteProperty -Name "schemes" -Value @()
+        # Ensure schemes array
+        if ($null -eq $wt.PSObject.Properties['schemes']) {
+            $wt | Add-Member -MemberType NoteProperty -Name "schemes" -Value @()
         }
 
-        # Check if Flexoki already present
-        $existing = $wtJson.schemes | Where-Object { $_.name -eq "Flexoki" }
-        if (-not $existing) {
-            $wtJson.schemes += [PSCustomObject]$FlexokiScheme
-            Write-Host "  Added Flexoki color scheme." -ForegroundColor Green
+        # Add Flexoki if missing
+        if (-not ($wt.schemes | Where-Object { $_.name -eq "Flexoki" })) {
+            $wt.schemes += [PSCustomObject]$FlexokiScheme
+            Write-Host "  Added Flexoki scheme." -ForegroundColor Green
         } else {
-            Write-Host "  Flexoki color scheme already present." -ForegroundColor Green
+            Write-Host "  Flexoki scheme already present." -ForegroundColor Green
         }
 
-        # Set Flexoki as default color scheme + CaskaydiaCove NF as default font
-        if (-not $wtJson.profiles.defaults) {
-            $wtJson.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value ([PSCustomObject]@{})
+        # Set defaults
+        if (-not $wt.profiles.defaults) {
+            $wt.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value ([PSCustomObject]@{})
         }
-        $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "colorScheme" -Value "Flexoki" -Force
-        if (-not $wtJson.profiles.defaults.font) {
-            $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value ([PSCustomObject]@{ face = "CaskaydiaCove NF" })
+        $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "colorScheme" -Value "Flexoki" -Force
+        if (-not $wt.profiles.defaults.font) {
+            $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value ([PSCustomObject]@{ face = "CaskaydiaCove NF" })
         }
-        Write-Host "  Set Flexoki as default color scheme." -ForegroundColor Green
 
-        $wtJson | ConvertTo-Json -Depth 32 | Set-Content $wtPath -Encoding UTF8
-        Write-Host "  Windows Terminal settings saved." -ForegroundColor Green
-        $patchedAny = $true
+        $wt | ConvertTo-Json -Depth 32 | Set-Content $wtPath -Encoding UTF8
+        Write-Host "  Windows Terminal patched." -ForegroundColor Green
+        $patchedWT = $true
     } catch {
         Write-Warning "  Failed to patch Windows Terminal: $_"
     }
 }
 
-if (-not $patchedAny) {
+if (-not $patchedWT) {
     Write-Host ""
-    Write-Host "  Windows Terminal settings.json not found — skipping color scheme." -ForegroundColor DarkGray
-    Write-Host "  (Install Windows Terminal first, then re-run setup to apply Flexoki.)" -ForegroundColor DarkGray
+    Write-Host "  Windows Terminal not found — skipping Flexoki." -ForegroundColor DarkGray
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -367,30 +290,16 @@ if (-not $patchedAny) {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host "  Setup complete!                                     " -ForegroundColor Green
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "  Setup complete." -ForegroundColor Green
 Write-Host ""
-Write-Host "  Installed to:" -ForegroundColor White
-Write-Host "    PowerShell 7+  : $coreDir" -ForegroundColor DarkGray
-Write-Host "    PowerShell 5.1 : $desktopDir" -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "  File layout (per directory):" -ForegroundColor White
-Write-Host "    Microsoft.PowerShell_profile.ps1  <- profile" -ForegroundColor DarkGray
-Write-Host "    cobalt2.omp.json                  <- Oh My Posh theme" -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "  Dependencies:" -ForegroundColor White
-Write-Host "    Oh My Posh, CaskaydiaCove NF, Chocolatey," -ForegroundColor DarkGray
-Write-Host "    Terminal-Icons, zoxide, fzf, PSFzf, fastfetch" -ForegroundColor DarkGray
+Write-Host "  Profile directories:" -ForegroundColor White
+Write-Host "    $coreDir" -ForegroundColor DarkGray
+Write-Host "    $desktopDir" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Commands:" -ForegroundColor White
-Write-Host "    Update-Profile    - pull latest profile from repo" -ForegroundColor Yellow
-Write-Host "    Update-PowerShell - check for PowerShell updates" -ForegroundColor Yellow
-Write-Host "    Show-Help         - list all available commands" -ForegroundColor Yellow
+Write-Host "    Update-Profile     Run this setup again" -ForegroundColor Yellow
+Write-Host "    Update-PowerShell  Check for PS updates" -ForegroundColor Yellow
+Write-Host "    Show-Help          List all commands" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  Next steps:" -ForegroundColor White
-Write-Host "    1. Restart your terminal" -ForegroundColor DarkGray
-Write-Host "    2. Set font to 'CaskaydiaCove NF' in your terminal settings" -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "  Restart your terminal to apply changes." -ForegroundColor DarkGray
 Write-Host ""

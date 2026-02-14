@@ -6,18 +6,17 @@
 
 # PowerShell Profile
 
-A fork of [ChrisTitusTech's PowerShell profile](https://github.com/ChrisTitusTech/powershell-profile) with performance optimizations and a one-punch setup that installs all dependencies in a single run.
+A fork of [ChrisTitusTech's PowerShell profile](https://github.com/ChrisTitusTech/powershell-profile) with performance optimizations. A single setup script installs all dependencies, deploys the profile, and configures Windows Terminal.
 
 Changes from upstream:
 - **No startup network calls** — removed the GitHub connectivity check and automatic update checks that add 200-500ms to every shell launch
 - **Deferred loading** — Oh My Posh and PSReadLine load synchronously (~200ms), everything else (Terminal-Icons, zoxide, utility functions) defers via `PowerShell.OnIdle` so the prompt appears instantly
-- **PS 5.1 compatible Show-Help** — uses `Write-Host` colors instead of `$PSStyle`
-- **Manual updates only** — `Update-Profile` and `Update-PowerShell` are commands you run when you want, not things that surprise you on startup
-- **fastfetch** included in the setup
+- **PS 5.1 compatible** — `Show-Help` uses `Write-Host` colors instead of `$PSStyle`, PSReadLine options adapt to the edition
+- **Manual updates only** — `Update-Profile` and `Update-PowerShell` are commands you run when you want, not things that run on startup
 
 ---
 
-## One-Line Install
+## Install
 
 ```powershell
 irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
@@ -29,17 +28,19 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 ## What Gets Installed
 
-| Dependency | What it does |
+| Dependency | Purpose |
 |---|---|
-| [Oh My Posh](https://ohmyposh.dev/) | Prompt engine + Cobalt2 theme |
-| [CaskaydiaCove NF](https://github.com/ryanoasis/nerd-fonts) | Nerd Font |
+| [Oh My Posh](https://ohmyposh.dev/) | Prompt engine (Cobalt2 theme) |
+| [CaskaydiaCove NF](https://github.com/ryanoasis/nerd-fonts) | Nerd Font for icons and glyphs |
 | [Chocolatey](https://chocolatey.org/) | Package manager |
 | [Terminal-Icons](https://github.com/devblackops/Terminal-Icons) | File icons in `ls` output |
 | [zoxide](https://github.com/ajeetdsouza/zoxide) | Smarter `cd` |
-| [fzf](https://github.com/junegunn/fzf) + [PSFzf](https://github.com/kelleyma49/PSFzf) | Fuzzy finder + PS integration |
+| [fzf](https://github.com/junegunn/fzf) + [PSFzf](https://github.com/kelleyma49/PSFzf) | Fuzzy finder + PowerShell integration |
 | [fastfetch](https://github.com/fastfetch-cli/fastfetch) | System info display |
 
-All steps are idempotent. Safe to re-run, skips anything already installed.
+Setup also injects the [Flexoki](https://stephango.com/flexoki) color scheme into Windows Terminal and sets CaskaydiaCove NF as the default font.
+
+All steps are idempotent. Safe to re-run — skips anything already installed.
 
 ---
 
@@ -57,9 +58,9 @@ PowerShell/
 
 ## Customization
 
-Edit the profile directly — it's yours. Run `Edit-Profile` or `ep` to open it in your configured editor.
+Edit the profile directly. Run `Edit-Profile` or `ep` to open it in your configured editor.
 
-If you want to keep personal additions separate from the main profile, create a `profile.ps1` file in the same directory. It gets sourced automatically at the end.
+To keep personal additions separate, create a `profile.ps1` file in the same directory. It is sourced automatically after the deferred block loads.
 
 ---
 
@@ -67,10 +68,10 @@ If you want to keep personal additions separate from the main profile, create a 
 
 | Command | What it does |
 |---|---|
-| `Update-Profile` | Downloads the latest profile from this repo (hash-compares, only overwrites if changed) |
+| `Update-Profile` | Re-runs the setup script (checks dependencies, downloads latest profile) |
 | `Update-PowerShell` | Checks GitHub for the latest PowerShell release and upgrades via winget |
 
-Both are manual — nothing runs automatically on startup.
+Both are manual. Nothing runs automatically on startup.
 
 ---
 
@@ -81,5 +82,5 @@ Both are manual — nothing runs automatically on startup.
 ---
 
 <p align="center">
-  <sub>MIT License. Do whatever you want with it.</sub>
+  <sub>MIT License</sub>
 </p>
