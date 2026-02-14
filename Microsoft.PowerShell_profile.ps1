@@ -125,7 +125,7 @@ try {
     if ($targetY -ge 0 -and $targetX -ge 0) {
         $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
         Write-Host "⚡ " -NoNewline -ForegroundColor Cyan
-        Write-Host "$syncMs" -NoNewline -ForegroundColor White
+        Write-Host "$syncMs" -NoNewline -ForegroundColor Gray
         Write-Host "ms" -NoNewline -ForegroundColor DarkGray
         Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
         Write-Host "Type " -NoNewline -ForegroundColor DarkGray
