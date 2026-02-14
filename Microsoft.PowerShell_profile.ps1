@@ -114,78 +114,38 @@ $syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
 # If host/cursor APIs aren't available, fall back to the normal second-line output.
 $bootStatusText = "boot ${syncMs}ms | Type 'Show-Help' for commands"
 $bootStatusShown = $false
-$global:DeferredLoadError = $null
-$global:ProfileLoadCompleted = $false
 
+try {
+    $rawUi = $Host.UI.RawUI
+    $cursor = $rawUi.CursorPosition
+    $windowWidth = $rawUi.WindowSize.Width
+    $targetY = $cursor.Y - 1
+    $targetX = $windowWidth - $bootStatusText.Length - 1
 
-function Write-BootStatusLine {
-    param(
-        [Parameter(Mandatory)]
-        [long]$ElapsedMs,
-        [switch]$NoNewline
-    )
+    if ($targetY -ge 0 -and $targetX -ge 0) {
+        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
+        Write-Host "boot " -NoNewline -ForegroundColor Cyan
+        Write-Host "$syncMs" -NoNewline -ForegroundColor DarkGray
+        Write-Host "ms" -NoNewline -ForegroundColor DarkGray
+        Write-Host " | " -NoNewline -ForegroundColor DarkGray
+        Write-Host "Type " -NoNewline -ForegroundColor DarkGray
+        Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
+        Write-Host " for commands" -NoNewline -ForegroundColor DarkGray
+        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates(0, $cursor.Y)
+        $bootStatusShown = $true
+    }
+} catch {
+    $bootStatusShown = $false
+}
 
-    Write-Host "boot " -NoNewline -ForegroundColor Cyan
-    Write-Host "$ElapsedMs" -NoNewline -ForegroundColor Gray
+if (-not $bootStatusShown) {
+    Write-Host "  boot " -NoNewline -ForegroundColor Cyan
+    Write-Host "$syncMs" -NoNewline -ForegroundColor DarkGray
     Write-Host "ms" -NoNewline -ForegroundColor DarkGray
     Write-Host " | " -NoNewline -ForegroundColor DarkGray
     Write-Host "Type " -NoNewline -ForegroundColor DarkGray
     Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
-    Write-Host " for commands" -NoNewline:$NoNewline -ForegroundColor DarkGray
-}
-# Friendly placeholder while deferred profile functions are still loading.
-if (-not (Get-Command Show-Help -ErrorAction SilentlyContinue)) {
-    function Show-Help {
-        $currentShowHelp = Get-Command Show-Help -CommandType Function -ErrorAction SilentlyContinue
-        if ($currentShowHelp -and $currentShowHelp.ScriptBlock -ne $MyInvocation.MyCommand.ScriptBlock) {
-            & $currentShowHelp @args
-            return
-        }
-
-        if (-not $global:ProfileLoadCompleted) {
-            Write-Host "Show-Help is still loading in the background..." -ForegroundColor DarkGray
-            return
-        }
-
-        if ($global:DeferredLoadError -and $global:CttProfilePath -and (Test-Path $global:CttProfilePath)) {
-            . $global:CttProfilePath
-            $resolvedShowHelp = Get-Command Show-Help -CommandType Function -ErrorAction SilentlyContinue
-            if ($resolvedShowHelp -and $resolvedShowHelp.ScriptBlock -ne $MyInvocation.MyCommand.ScriptBlock) {
-                & $resolvedShowHelp @args
-                return
-            }
-        }
-
-        Write-Host "Show-Help is unavailable in this session." -ForegroundColor DarkGray
-    }
-}
-
-function Try-WriteBootStatusInline {
-    param([long]$ElapsedMs)
-
-    try {
-        $rawUi = $Host.UI.RawUI
-        $cursor = $rawUi.CursorPosition
-        $targetY = $cursor.Y - 1
-        $targetX = $rawUi.WindowSize.Width - $bootStatusText.Length - 1
-
-        if ($targetY -lt 0 -or $targetX -lt 0) {
-            return $false
-        }
-
-        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
-        Write-BootStatusLine -ElapsedMs $ElapsedMs -NoNewline
-        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates(0, $cursor.Y)
-        return $true
-    } catch {
-        return $false
-    }
-}
-
-$bootStatusShown = Try-WriteBootStatusInline -ElapsedMs $syncMs
-if (-not $bootStatusShown)
-{
-    Write-BootStatusLine -ElapsedMs $syncMs
+    Write-Host " for commands" -ForegroundColor DarkGray
 }
 
 
@@ -238,23 +198,18 @@ $Deferred = {
         try {
             function Write-Host { }
             . $global:CttProfilePath
-        } catch {
-            $global:DeferredLoadError = $_.Exception.Message
-            Write-Host "Deferred profile load failed: $global:DeferredLoadError" -ForegroundColor DarkGray
         } finally {
             if (Test-Path Function:\Write-Host) {
                 Remove-Item Function:\Write-Host -ErrorAction SilentlyContinue
             }
         }
 
-
         # CTT defines its own prompt. Restore the sync oh-my-posh prompt.
         if ($global:DeferredWrapperPrompt) {
             Set-Item Function:\prompt -Value $global:DeferredWrapperPrompt
         }
     } else {
-        $global:DeferredLoadError = "CTT profile not found at $global:CttProfilePath"
-        Write-Host "$global:DeferredLoadError. Did you rename it?" -ForegroundColor DarkGray
+        Write-Warning "CTT profile not found at $global:CttProfilePath. Did you rename it?"
     }
 
     # ── YOUR PERSONAL ADDITIONS ──
@@ -267,12 +222,10 @@ $Deferred = {
     #   Set-Alias -Name k -Value kubectl
 
     # Signal that everything is loaded
-    $global:ProfileLoadCompleted = $true
-    $global:ProfileFullyLoaded = (-not $global:DeferredLoadError)
-
+    $global:ProfileFullyLoaded = $true
 
     # Flash completion in window title (non-destructive, never stomps your prompt)
-    # ⏳ → ✓ → clean
+    # [loading] -> [ready] -> clean
     $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' \[loading\]$', ''
     $Host.UI.RawUI.WindowTitle = "$currentTitle [ready]"
     Start-Sleep -Seconds 2
