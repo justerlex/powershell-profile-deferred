@@ -288,54 +288,105 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
 
     # ── Help ──
     function global:Show-Help {
-        $commands = @(
-            @("Profile",    @("Edit-Profile / ep",  "Open profile in editor"),
-                            @("Update-Profile",     "Run setup (dependencies + profile)"),
-                            @("Update-PowerShell",  "Check for PowerShell updates"))
-            @("Git",        @("gs",                 "git status"),
-                            @("ga",                 "git add ."),
-                            @("gc <msg>",           "git commit -m"),
-                            @("gcl <repo>",         "git clone"),
-                            @("gcom <msg>",         "add + commit"),
-                            @("gpush / gpull",      "push / pull"),
-                            @("lazyg <msg>",        "add, commit, push"),
-                            @("g",                  "cd to github dir"))
-            @("Utilities",  @("cpy / pst",          "Clipboard copy / paste"),
-                            @("df",                 "Disk volumes"),
-                            @("docs / dtop",        "cd to Documents / Desktop"),
-                            @("export <n> <v>",     "Set env variable"),
-                            @("ff <name>",          "Find files recursively"),
-                            @("ffe",                "System info (fastfetch)"),
-                            @("flushdns",           "Clear DNS cache"),
-                            @("grep <rx> [dir]",    "Search text in files"),
-                            @("hb <file>",          "Upload to hastebin"),
-                            @("head / tail",        "First / last n lines"),
-                            @("k9 / pkill / pgrep", "Process management"),
-                            @("la / ll",            "List files / incl. hidden"),
-                            @("mkcd <dir>",         "Create and cd into dir"),
-                            @("nf / touch",         "Create file"),
-                            @("pubip",              "Show public IP"),
-                            @("sed <f> <s> <r>",    "Replace text in file"),
-                            @("sysinfo",            "System information"),
-                            @("trash <path>",       "Move to Recycle Bin"),
-                            @("unzip <file>",       "Extract zip"),
-                            @("uptime",             "System uptime"),
-                            @("which <name>",       "Show command path"),
-                            @("winutil",            "Chris Titus WinUtil"),
-                            @("Clear-Cache",        "Clear temp/prefetch cache"))
-        )
-
         Write-Host ""
-        foreach ($section in $commands) {
-            Write-Host "  $($section[0])" -ForegroundColor Cyan
-            Write-Host "  $('=' * 35)" -ForegroundColor DarkGray
-            for ($i = 1; $i -lt $section.Count; $i++) {
-                $name, $desc = $section[$i]
-                Write-Host "    $name" -ForegroundColor Green -NoNewline
-                Write-Host " - $desc" -ForegroundColor Gray
-            }
-            Write-Host ""
-        }
+        Write-Host "PowerShell Profile Help" -ForegroundColor Cyan
+        Write-Host "=======================" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "  Edit-Profile / ep" -ForegroundColor Green -NoNewline
+        Write-Host " - Open profile in editor" -ForegroundColor Gray
+        Write-Host "  Update-Profile" -ForegroundColor Green -NoNewline
+        Write-Host " - Run setup (dependencies + profile)" -ForegroundColor Gray
+        Write-Host "  Update-PowerShell" -ForegroundColor Green -NoNewline
+        Write-Host " - Check for PowerShell updates" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "Git Shortcuts" -ForegroundColor Cyan
+        Write-Host "=======================" -ForegroundColor Yellow
+        Write-Host "  gs" -ForegroundColor Green -NoNewline
+        Write-Host " - git status" -ForegroundColor Gray
+        Write-Host "  ga" -ForegroundColor Green -NoNewline
+        Write-Host " - git add ." -ForegroundColor Gray
+        Write-Host "  gc <msg>" -ForegroundColor Green -NoNewline
+        Write-Host " - git commit -m" -ForegroundColor Gray
+        Write-Host "  gcl <repo>" -ForegroundColor Green -NoNewline
+        Write-Host " - git clone" -ForegroundColor Gray
+        Write-Host "  gcom <msg>" -ForegroundColor Green -NoNewline
+        Write-Host " - git add . && git commit -m" -ForegroundColor Gray
+        Write-Host "  gpush" -ForegroundColor Green -NoNewline
+        Write-Host " - git push" -ForegroundColor Gray
+        Write-Host "  gpull" -ForegroundColor Green -NoNewline
+        Write-Host " - git pull" -ForegroundColor Gray
+        Write-Host "  lazyg <msg>" -ForegroundColor Green -NoNewline
+        Write-Host " - add, commit, push" -ForegroundColor Gray
+        Write-Host "  g" -ForegroundColor Green -NoNewline
+        Write-Host " - cd to github directory" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "Utilities" -ForegroundColor Cyan
+        Write-Host "=======================" -ForegroundColor Yellow
+        Write-Host "  cpy <text>" -ForegroundColor Green -NoNewline
+        Write-Host " - Copy to clipboard" -ForegroundColor Gray
+        Write-Host "  pst" -ForegroundColor Green -NoNewline
+        Write-Host " - Paste from clipboard" -ForegroundColor Gray
+        Write-Host "  df" -ForegroundColor Green -NoNewline
+        Write-Host " - Disk volumes" -ForegroundColor Gray
+        Write-Host "  docs" -ForegroundColor Green -NoNewline
+        Write-Host " - cd to Documents" -ForegroundColor Gray
+        Write-Host "  dtop" -ForegroundColor Green -NoNewline
+        Write-Host " - cd to Desktop" -ForegroundColor Gray
+        Write-Host "  export <n> <v>" -ForegroundColor Green -NoNewline
+        Write-Host " - Set env variable" -ForegroundColor Gray
+        Write-Host "  ff <name>" -ForegroundColor Green -NoNewline
+        Write-Host " - Find files recursively" -ForegroundColor Gray
+        Write-Host "  ffe" -ForegroundColor Green -NoNewline
+        Write-Host " - System info (fastfetch)" -ForegroundColor Gray
+        Write-Host "  flushdns" -ForegroundColor Green -NoNewline
+        Write-Host " - Clear DNS cache" -ForegroundColor Gray
+        Write-Host "  grep <rx> [dir]" -ForegroundColor Green -NoNewline
+        Write-Host " - Search text in files" -ForegroundColor Gray
+        Write-Host "  hb <file>" -ForegroundColor Green -NoNewline
+        Write-Host " - Upload to hastebin" -ForegroundColor Gray
+        Write-Host "  head <path> [n]" -ForegroundColor Green -NoNewline
+        Write-Host " - First n lines (default 10)" -ForegroundColor Gray
+        Write-Host "  tail <path> [n]" -ForegroundColor Green -NoNewline
+        Write-Host " - Last n lines (default 10)" -ForegroundColor Gray
+        Write-Host "  k9 <name>" -ForegroundColor Green -NoNewline
+        Write-Host " - Kill process by name" -ForegroundColor Gray
+        Write-Host "  la" -ForegroundColor Green -NoNewline
+        Write-Host " - List files" -ForegroundColor Gray
+        Write-Host "  ll" -ForegroundColor Green -NoNewline
+        Write-Host " - List files (incl. hidden)" -ForegroundColor Gray
+        Write-Host "  mkcd <dir>" -ForegroundColor Green -NoNewline
+        Write-Host " - Create and cd into directory" -ForegroundColor Gray
+        Write-Host "  nf <name>" -ForegroundColor Green -NoNewline
+        Write-Host " - Create new file" -ForegroundColor Gray
+        Write-Host "  pgrep <name>" -ForegroundColor Green -NoNewline
+        Write-Host " - List processes by name" -ForegroundColor Gray
+        Write-Host "  pkill <name>" -ForegroundColor Green -NoNewline
+        Write-Host " - Kill processes by name" -ForegroundColor Gray
+        Write-Host "  pubip" -ForegroundColor Green -NoNewline
+        Write-Host " - Show public IP" -ForegroundColor Gray
+        Write-Host "  sed <f> <find> <rep>" -ForegroundColor Green -NoNewline
+        Write-Host " - Replace text in file" -ForegroundColor Gray
+        Write-Host "  sysinfo" -ForegroundColor Green -NoNewline
+        Write-Host " - System information" -ForegroundColor Gray
+        Write-Host "  touch <file>" -ForegroundColor Green -NoNewline
+        Write-Host " - Create empty file" -ForegroundColor Gray
+        Write-Host "  trash <path>" -ForegroundColor Green -NoNewline
+        Write-Host " - Move to Recycle Bin" -ForegroundColor Gray
+        Write-Host "  unzip <file>" -ForegroundColor Green -NoNewline
+        Write-Host " - Extract zip" -ForegroundColor Gray
+        Write-Host "  uptime" -ForegroundColor Green -NoNewline
+        Write-Host " - System uptime" -ForegroundColor Gray
+        Write-Host "  which <name>" -ForegroundColor Green -NoNewline
+        Write-Host " - Show command path" -ForegroundColor Gray
+        Write-Host "  winutil" -ForegroundColor Green -NoNewline
+        Write-Host " - Chris Titus WinUtil" -ForegroundColor Gray
+        Write-Host "  winutildev" -ForegroundColor Green -NoNewline
+        Write-Host " - Chris Titus WinUtil (dev)" -ForegroundColor Gray
+        Write-Host "  Clear-Cache" -ForegroundColor Green -NoNewline
+        Write-Host " - Clear temp/prefetch/IE cache" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "Use 'Show-Help' to display this help message." -ForegroundColor Magenta
+        Write-Host ""
     }
 
     # Source user customizations if present
