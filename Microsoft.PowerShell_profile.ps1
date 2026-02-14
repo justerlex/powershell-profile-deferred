@@ -17,7 +17,7 @@ if ([bool]([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsSystem) 
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $adminSuffix = if ($isAdmin) { " [ADMIN]" } else { "" }
-$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix [loading]" -f $PSVersionTable.PSVersion.ToString()
+$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix ..." -f $PSVersionTable.PSVersion.ToString()
 
 function Get-ProfileDir {
     if ($PSVersionTable.PSEdition -eq "Core") {
@@ -160,6 +160,25 @@ $Deferred = {
         }
     }
 
+    function Update-Wrapper {
+        try {
+            $url = "https://raw.githubusercontent.com/justerlex/powershell-profile-deferred/main/Microsoft.PowerShell_profile.ps1"
+            $oldhash = Get-FileHash $PROFILE
+            Invoke-RestMethod $url -OutFile "$env:temp/deferred-wrapper.ps1"
+            $newhash = Get-FileHash "$env:temp/deferred-wrapper.ps1"
+            if ($newhash.Hash -ne $oldhash.Hash) {
+                Copy-Item -Path "$env:temp/deferred-wrapper.ps1" -Destination $PROFILE -Force
+                Write-Host "Deferred wrapper updated. Restart your shell to reflect changes." -ForegroundColor Magenta
+            } else {
+                Write-Host "Deferred wrapper is up to date." -ForegroundColor Green
+            }
+        } catch {
+            Write-Error "Unable to check for wrapper updates: $_"
+        } finally {
+            Remove-Item "$env:temp/deferred-wrapper.ps1" -ErrorAction SilentlyContinue
+        }
+    }
+
     # Source CTT profile with Write-Host suppressed to prevent background output
     # stomping the terminal. Functions defined during sourcing resolve Write-Host
     # at call time, so they'll find the real cmdlet when invoked later.
@@ -182,10 +201,10 @@ $Deferred = {
 
     $global:ProfileFullyLoaded = $true
 
-    # Title: [loading] -> [ready] -> clean
-    $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' \[loading\]$', ''
-    $Host.UI.RawUI.WindowTitle = "$currentTitle [ready]"
-    Start-Sleep -Seconds 2
+    # Title: ... -> * -> clean
+    $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' \.\.\.$', ''
+    $Host.UI.RawUI.WindowTitle = "$currentTitle *"
+    Start-Sleep -Seconds 1
     $Host.UI.RawUI.WindowTitle = $currentTitle
 }
 
