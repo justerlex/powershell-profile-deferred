@@ -24,8 +24,6 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 ---
 
-> Note: startup status text in the wrapper uses ASCII-only characters so the profile parses correctly in Windows PowerShell 5.1 even when files are saved without a UTF BOM.
-
 ## 📦 What Gets Installed
 
 The installer handles everything in one shot.
