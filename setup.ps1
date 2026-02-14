@@ -1,30 +1,24 @@
-### Deferred PowerShell Profile — Setup
-### Installs ChrisTitusTech's PowerShell profile + a deferred-loading wrapper
-### that drops your time-to-prompt from ~1-2s to ~200ms.
+### PowerShell Profile — Setup
+### Fork of ChrisTitusTech/powershell-profile with performance optimizations.
 ###
 ### USAGE (elevated PowerShell):
 ###   irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ###
 ### WHAT THIS DOES:
-###   1. Installs all dependencies (Oh My Posh, Nerd Fonts, Chocolatey, fzf, Terminal-Icons, zoxide)
-###   2. Downloads CTT's profile as 'ctt-profile.ps1' (so it can update independently)
-###   3. Installs the deferred wrapper as your actual PowerShell profile
-###   4. Patches BOTH PowerShell 7+ and Windows PowerShell 5.1 directories
-###   5. Backs up any existing profiles before touching anything
+###   1. Installs all dependencies (Oh My Posh, Nerd Fonts, Chocolatey, fzf, Terminal-Icons, zoxide, fastfetch)
+###   2. Downloads the profile as your active PowerShell profile
+###   3. Patches BOTH PowerShell 7+ and Windows PowerShell 5.1 directories
+###   4. Backs up any existing profiles before touching anything
 ###
 ### SAFE TO RE-RUN: Detects existing installs and updates in place.
-### Works on clean machines AND machines with CTT's profile already installed.
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CONFIGURATION — change these if you fork the repo
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $Config = @{
-    # Where the deferred wrapper lives (link to YOUR repo)
-    WrapperRepoRoot = "https://raw.githubusercontent.com/justerlex/powershell-profile-deferred/main"
-
-    # Where CTT's profile lives (upstream)
-    CttRepoRoot     = "https://raw.githubusercontent.com/ChrisTitusTech/powershell-profile/main"
+    # Where the profile lives (link to YOUR repo)
+    RepoRoot        = "https://raw.githubusercontent.com/justerlex/powershell-profile-deferred/main"
 
     # Oh My Posh theme
     OmpThemeName    = "cobalt2"
@@ -62,7 +56,7 @@ if (-not (Test-InternetConnection)) {
 
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  Deferred PowerShell Profile — Setup                 " -ForegroundColor Cyan
+Write-Host "  PowerShell Profile — Setup                          " -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 
@@ -70,7 +64,7 @@ Write-Host ""
 #  DEPENDENCY INSTALLATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$totalSteps = 7
+$totalSteps = 8
 
 # ── Oh My Posh ──
 Write-Host "[1/$totalSteps] Installing Oh My Posh..." -ForegroundColor Yellow
@@ -126,11 +120,9 @@ try {
 
     if ($fontFamilies -notcontains "MesloLGM Nerd Font") {
         if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-            # oh-my-posh font install accepts a font name non-interactively
             oh-my-posh font install meslo
             Write-Host "  Meslo Nerd Font installed via Oh My Posh." -ForegroundColor Green
         } else {
-            # Fallback: manual zip download
             $mesloZipUrl = "https://github.com/ryanoasis/nerd-fonts/releases/download/v$($Config.FontVersion)/Meslo.zip"
             $mesloZip = "$env:TEMP\Meslo.zip"
             $mesloExtract = "$env:TEMP\Meslo"
@@ -223,11 +215,24 @@ try {
     Write-Error "  Failed to install PSFzf module: $_"
 }
 
+# ── fastfetch ──
+Write-Host "[8/$totalSteps] Installing fastfetch..." -ForegroundColor Yellow
+try {
+    if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
+        Write-Host "  fastfetch already installed." -ForegroundColor Green
+    } else {
+        winget install -e --accept-source-agreements --accept-package-agreements Fastfetch-cli.Fastfetch
+        Write-Host "  fastfetch installed." -ForegroundColor Green
+    }
+} catch {
+    Write-Error "  Failed to install fastfetch: $_"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PROFILE PATCHING
 # ═══════════════════════════════════════════════════════════════════════════════
 
-function Install-DeferredProfile {
+function Install-Profile {
     param(
         [string]$ProfileDir,
         [string]$Edition
@@ -243,21 +248,31 @@ function Install-DeferredProfile {
     }
 
     $profileFile = Join-Path $ProfileDir "Microsoft.PowerShell_profile.ps1"
-    $cttFile     = Join-Path $ProfileDir "ctt-profile.ps1"
     $backupFile  = Join-Path $ProfileDir "oldprofile.ps1"
 
     # ── Detect what's currently installed ──
     if (Test-Path $profileFile) {
         $existingContent = Get-Content $profileFile -Raw -ErrorAction SilentlyContinue
 
-        if ($existingContent -match "DO NOT MODIFY THIS FILE\. THIS FILE IS HASHED") {
-            # Unpatched CTT profile — relocate it
-            Write-Host "  Found existing CTT profile — relocating to ctt-profile.ps1" -ForegroundColor DarkGray
-            Move-Item -Path $profileFile -Destination $cttFile -Force
+        if ($existingContent -match "Fork of ChrisTitusTech/powershell-profile") {
+            # Our fork already — update in place
+            Write-Host "  Found existing fork profile — updating." -ForegroundColor DarkGray
 
         } elseif ($existingContent -match "Deferred CTT Profile Wrapper") {
-            # Our wrapper already — update in place
-            Write-Host "  Found existing deferred wrapper — updating." -ForegroundColor DarkGray
+            # Old wrapper version — back it up, clean install
+            Write-Host "  Found old wrapper profile — backing up to [$backupFile]" -ForegroundColor DarkGray
+            Copy-Item -Path $profileFile -Destination $backupFile -Force
+            # Also clean up leftover ctt-profile.ps1
+            $cttFile = Join-Path $ProfileDir "ctt-profile.ps1"
+            if (Test-Path $cttFile) {
+                Remove-Item -Path $cttFile -Force
+                Write-Host "  Removed leftover ctt-profile.ps1" -ForegroundColor DarkGray
+            }
+
+        } elseif ($existingContent -match "DO NOT MODIFY THIS FILE\. THIS FILE IS HASHED") {
+            # Unpatched CTT profile — back it up
+            Write-Host "  Found existing CTT profile — backing up to [$backupFile]" -ForegroundColor DarkGray
+            Copy-Item -Path $profileFile -Destination $backupFile -Force
 
         } else {
             # Some other profile — back it up
@@ -268,25 +283,14 @@ function Install-DeferredProfile {
         Write-Host "  No existing profile found — fresh install." -ForegroundColor DarkGray
     }
 
-    # ── Download CTT's profile as ctt-profile.ps1 ──
-    Write-Host "  Downloading latest CTT profile..." -ForegroundColor DarkGray
+    # ── Download the profile ──
+    Write-Host "  Downloading profile..." -ForegroundColor DarkGray
     try {
-        $cttUrl = "$($Config.CttRepoRoot)/Microsoft.PowerShell_profile.ps1"
-        Invoke-RestMethod $cttUrl -OutFile $cttFile
-        Write-Host "  CTT profile saved to [$cttFile]" -ForegroundColor Green
+        $profileUrl = "$($Config.RepoRoot)/Microsoft.PowerShell_profile.ps1"
+        Invoke-RestMethod $profileUrl -OutFile $profileFile
+        Write-Host "  Profile installed at [$profileFile]" -ForegroundColor Green
     } catch {
-        Write-Error "  Failed to download CTT profile: $_"
-        return
-    }
-
-    # ── Download the deferred wrapper as the active profile ──
-    Write-Host "  Downloading deferred wrapper..." -ForegroundColor DarkGray
-    try {
-        $wrapperUrl = "$($Config.WrapperRepoRoot)/Microsoft.PowerShell_profile.ps1"
-        Invoke-RestMethod $wrapperUrl -OutFile $profileFile
-        Write-Host "  Deferred wrapper installed at [$profileFile]" -ForegroundColor Green
-    } catch {
-        Write-Error "  Failed to download deferred wrapper: $_"
+        Write-Error "  Failed to download profile: $_"
         return
     }
 
@@ -311,8 +315,8 @@ function Install-DeferredProfile {
 $coreDir    = "$env:USERPROFILE\Documents\PowerShell"
 $desktopDir = "$env:USERPROFILE\Documents\WindowsPowerShell"
 
-Install-DeferredProfile -ProfileDir $coreDir    -Edition "PowerShell 7+"
-Install-DeferredProfile -ProfileDir $desktopDir -Edition "Windows PowerShell 5.1"
+Install-Profile -ProfileDir $coreDir    -Edition "PowerShell 7+"
+Install-Profile -ProfileDir $desktopDir -Edition "Windows PowerShell 5.1"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DONE
@@ -328,22 +332,21 @@ Write-Host "    PowerShell 7+  : $coreDir" -ForegroundColor DarkGray
 Write-Host "    PowerShell 5.1 : $desktopDir" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  File layout (per directory):" -ForegroundColor White
-Write-Host "    Microsoft.PowerShell_profile.ps1  <- deferred wrapper" -ForegroundColor DarkGray
-Write-Host "    ctt-profile.ps1                   <- CTT profile" -ForegroundColor DarkGray
+Write-Host "    Microsoft.PowerShell_profile.ps1  <- profile" -ForegroundColor DarkGray
 Write-Host "    cobalt2.omp.json                  <- Oh My Posh theme" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Dependencies:" -ForegroundColor White
 Write-Host "    Oh My Posh, CaskaydiaCove NF, Meslo NF, Chocolatey," -ForegroundColor DarkGray
-Write-Host "    Terminal-Icons, zoxide, fzf, PSFzf" -ForegroundColor DarkGray
+Write-Host "    Terminal-Icons, zoxide, fzf, PSFzf, fastfetch" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Commands:" -ForegroundColor White
-Write-Host "    Update-Profile  - pull latest CTT code" -ForegroundColor Yellow
-Write-Host "    Update-Wrapper  - re-run this setup (updates wrapper + deps)" -ForegroundColor Yellow
+Write-Host "    Update-Profile    - pull latest profile from repo" -ForegroundColor Yellow
+Write-Host "    Update-PowerShell - check for PowerShell updates" -ForegroundColor Yellow
+Write-Host "    Show-Help         - list all available commands" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor White
 Write-Host "    1. Restart your terminal" -ForegroundColor DarkGray
 Write-Host "    2. Set font to 'MesloLGM Nerd Font' or 'CaskaydiaCove NF'" -ForegroundColor DarkGray
-Write-Host "    3. Prompt loads in ~200ms, everything else in ~1s" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
