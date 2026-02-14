@@ -19,7 +19,7 @@ if ([bool]([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsSystem) 
 # Admin check + window title. you want this on screen immediately
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $adminSuffix = if ($isAdmin) { " [ADMIN]" } else { "" }
-$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix" -f $PSVersionTable.PSVersion.ToString()
+$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix ⏳" -f $PSVersionTable.PSVersion.ToString()
 
 # Helper (same as CTT's, needed for theme path)
 function Get-ProfileDir {
@@ -103,9 +103,19 @@ if ($host.Name -eq 'ConsoleHost') {
 #  DEFERRED. the entire CTT profile loads in a background runspace
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Show sync load time
+# Boot sequence display
 $global:ProfileStopwatch.Stop()
-Write-Host "Profile loaded in $([math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds))ms (deferred loading in background)" -ForegroundColor DarkGray
+$syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
+Write-Host "  ⚡ " -NoNewline -ForegroundColor Cyan
+Write-Host "$syncMs" -NoNewline -ForegroundColor White
+Write-Host "ms" -NoNewline -ForegroundColor DarkGray
+Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
+Write-Host "ready" -NoNewline -ForegroundColor Green
+Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
+Write-Host "async ░░░" -ForegroundColor DarkCyan
+Write-Host "  Type " -NoNewline -ForegroundColor DarkGray
+Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
+Write-Host " for commands" -ForegroundColor DarkGray
 
 # Path to the renamed CTT profile
 $global:CttProfilePath = Join-Path (Split-Path $PROFILE) "ctt-profile.ps1"
@@ -171,6 +181,13 @@ $Deferred = {
 
     # Signal that everything is loaded
     $global:ProfileFullyLoaded = $true
+
+    # Flash completion in window title (non-destructive, never stomps your prompt)
+    # ⏳ → ✓ → clean
+    $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' ⏳$', ''
+    $Host.UI.RawUI.WindowTitle = "$currentTitle ✓"
+    Start-Sleep -Seconds 2
+    $Host.UI.RawUI.WindowTitle = $currentTitle
 }
 
 
