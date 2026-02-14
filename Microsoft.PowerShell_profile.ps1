@@ -109,13 +109,45 @@ if ($host.Name -eq 'ConsoleHost') {
 # Boot sequence display
 $global:ProfileStopwatch.Stop()
 $syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
-Write-Host "  ⚡ " -NoNewline -ForegroundColor Cyan
-Write-Host "$syncMs" -NoNewline -ForegroundColor White
-Write-Host "ms" -NoNewline -ForegroundColor DarkGray
-Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
-Write-Host "Type " -NoNewline -ForegroundColor DarkGray
-Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
-Write-Host " for commands" -ForegroundColor DarkGray
+
+# Try to render helper text on the right side of the startup banner line.
+# If host/cursor APIs aren't available, fall back to the normal second-line output.
+$bootStatusText = "⚡ ${syncMs}ms ┃ Type 'Show-Help' for commands"
+$bootStatusShown = $false
+
+try {
+    $rawUi = $Host.UI.RawUI
+    $cursor = $rawUi.CursorPosition
+    $windowWidth = $rawUi.WindowSize.Width
+    $targetY = $cursor.Y - 1
+    $targetX = $windowWidth - $bootStatusText.Length - 1
+
+    if ($targetY -ge 0 -and $targetX -ge 0) {
+        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
+        Write-Host "⚡ " -NoNewline -ForegroundColor Cyan
+        Write-Host "$syncMs" -NoNewline -ForegroundColor White
+        Write-Host "ms" -NoNewline -ForegroundColor DarkGray
+        Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
+        Write-Host "Type " -NoNewline -ForegroundColor DarkGray
+        Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
+        Write-Host " for commands" -NoNewline -ForegroundColor DarkGray
+        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates(0, $cursor.Y)
+        $bootStatusShown = $true
+    }
+} catch {
+    $bootStatusShown = $false
+}
+
+if (-not $bootStatusShown) {
+    Write-Host "  ⚡ " -NoNewline -ForegroundColor Cyan
+    Write-Host "$syncMs" -NoNewline -ForegroundColor White
+    Write-Host "ms" -NoNewline -ForegroundColor DarkGray
+    Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
+    Write-Host "Type " -NoNewline -ForegroundColor DarkGray
+    Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
+    Write-Host " for commands" -ForegroundColor DarkGray
+}
+
 
 # Path to the renamed CTT profile
 $global:CttProfilePath = Join-Path (Split-Path $PROFILE) "ctt-profile.ps1"
