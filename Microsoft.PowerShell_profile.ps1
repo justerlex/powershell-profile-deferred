@@ -3,10 +3,12 @@
 ### https://fsackur.github.io/2023/11/20/Deferred-profile-loading-for-better-performance/
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  SYNCHRONOUS — runs immediately, gets you a working prompt ASAP
+#  SYNCHRONOUS. runs immediately, gets you a working prompt ASAP
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Encoding — MUST be main thread, cannot be deferred
+$global:ProfileStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+# Encoding. MUST be main thread, cannot be deferred
 [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
 # Telemetry opt-out (same as CTT's, only when running as system)
@@ -14,7 +16,7 @@ if ([bool]([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsSystem) 
     [System.Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', 'true', [System.EnvironmentVariableTarget]::Machine)
 }
 
-# Admin check + window title — you want this on screen immediately
+# Admin check + window title. you want this on screen immediately
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $adminSuffix = if ($isAdmin) { " [ADMIN]" } else { "" }
 $Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix" -f $PSVersionTable.PSVersion.ToString()
@@ -70,7 +72,7 @@ if ($host.Name -eq 'ConsoleHost') {
 
     Set-PSReadLineOption @PSReadLineOptions
 
-    # Key handlers — identical to CTT
+    # Key handlers. identical to CTT
     Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
     Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
@@ -90,7 +92,7 @@ if ($host.Name -eq 'ConsoleHost') {
         return ($null -eq $hasSensitive)
     }
 
-    # Final prediction source — Core gets HistoryAndPlugin, Desktop gets History
+    # Final prediction source. Core gets HistoryAndPlugin, Desktop gets History
     if ($PSVersionTable.PSEdition -eq "Core") {
         Set-PSReadLineOption -PredictionSource HistoryAndPlugin
     }
@@ -98,22 +100,26 @@ if ($host.Name -eq 'ConsoleHost') {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  DEFERRED — the entire CTT profile loads in a background runspace
+#  DEFERRED. the entire CTT profile loads in a background runspace
 # ═══════════════════════════════════════════════════════════════════════════════
+
+# Show sync load time
+$global:ProfileStopwatch.Stop()
+Write-Host "Profile loaded in $([math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds))ms (deferred loading in background)" -ForegroundColor DarkGray
 
 # Path to the renamed CTT profile
 $global:CttProfilePath = Join-Path (Split-Path $PROFILE) "ctt-profile.ps1"
 
-# The deferred scriptblock — runs in the global SessionState via background runspace
+# The deferred scriptblock. runs in the global SessionState via background runspace
 $Deferred = {
 
     # ── Overrides ──
     # These MUST be defined before sourcing CTT so its Get-Command checks find them.
 
-    # We already init'd oh-my-posh synchronously — don't let CTT do it again
+    # We already init'd oh-my-posh synchronously. don't let CTT do it again
     function Get-Theme_Override { }
 
-    # We already configured PSReadLine — don't let CTT reconfigure/conflict
+    # We already configured PSReadLine. don't let CTT reconfigure/conflict
     function Set-PredictionSource_Override { }
 
     # Redirect Update-Profile to target ctt-profile.ps1 instead of $PROFILE (our wrapper)
@@ -137,13 +143,21 @@ $Deferred = {
     }
 
     # ── Source the full CTT profile ──
-    # Everything — Terminal-Icons, GitHub connectivity check, zoxide, all 50+ functions,
-    # argument completers, chocolatey profile — loads here in the background.
+    # Everything: Terminal-Icons, GitHub connectivity check, zoxide, all 50+ functions,
+    # argument completers, chocolatey profile. Loads here in the background.
     # Functions become available incrementally as each line executes.
+    #
+    # IMPORTANT: We shadow Write-Host with a no-op during sourcing to prevent
+    # background output from stomping the terminal while you're typing.
+    # Functions DEFINED during sourcing (uptime, flushdns, etc.) won't break
+    # because PowerShell resolves command names at call time, not definition time.
+    # When you run 'uptime' later, it finds the real Write-Host cmdlet.
     if (Test-Path $global:CttProfilePath) {
+        function Write-Host { }
         . $global:CttProfilePath
+        Remove-Item Function:\Write-Host
     } else {
-        Write-Warning "CTT profile not found at $global:CttProfilePath — did you rename it?"
+        Write-Warning "CTT profile not found at $global:CttProfilePath. Did you rename it?"
     }
 
     # ── YOUR PERSONAL ADDITIONS ──
@@ -161,7 +175,7 @@ $Deferred = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  DEFERRED LOADING ENGINE — fsackur's SessionState + Runspace technique
+#  DEFERRED LOADING ENGINE. fsackur's SessionState + Runspace technique
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Capture the global session state so the background runspace can inject into it
@@ -220,5 +234,5 @@ $Wrapper = {
 $null = $Powershell.AddScript($Wrapper.ToString()).BeginInvoke()
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  DONE — shell is live. CTT functions arrive within ~1 second.
+#  DONE. prompt is live. CTT functions arrive within ~1 second.
 # ═══════════════════════════════════════════════════════════════════════════════
