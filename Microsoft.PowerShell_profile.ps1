@@ -42,6 +42,9 @@ if (Test-Path $localThemePath) {
     oh-my-posh init pwsh --config "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/cobalt2.omp.json" | Invoke-Expression
 }
 
+# Preserve the oh-my-posh prompt so deferred CTT loading can't replace it.
+$global:DeferredWrapperPrompt = (Get-Command prompt -CommandType Function -ErrorAction SilentlyContinue).ScriptBlock
+
 # ── PSReadLine ── Full config matching CTT's setup so you feel no difference from keystroke one
 if ($host.Name -eq 'ConsoleHost') {
     # Replicate CTT's pastel color scheme and settings (lines 573-613 of the original)
@@ -109,11 +112,8 @@ $syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
 Write-Host "  ⚡ " -NoNewline -ForegroundColor Cyan
 Write-Host "$syncMs" -NoNewline -ForegroundColor White
 Write-Host "ms" -NoNewline -ForegroundColor DarkGray
-Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
-Write-Host "ready" -NoNewline -ForegroundColor Green
-Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
-Write-Host "async ░░░" -ForegroundColor DarkCyan
-Write-Host "  Type " -NoNewline -ForegroundColor DarkGray
+Write-Host " / " -NoNewline -ForegroundColor DarkGray
+Write-Host "Type " -NoNewline -ForegroundColor DarkGray
 Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
 Write-Host " for commands" -ForegroundColor DarkGray
 
@@ -166,6 +166,11 @@ $Deferred = {
         function Write-Host { }
         . $global:CttProfilePath
         Remove-Item Function:\Write-Host
+
+        # CTT defines its own prompt. Restore the sync oh-my-posh prompt.
+        if ($global:DeferredWrapperPrompt) {
+            Set-Item Function:\prompt -Value $global:DeferredWrapperPrompt
+        }
     } else {
         Write-Warning "CTT profile not found at $global:CttProfilePath. Did you rename it?"
     }
