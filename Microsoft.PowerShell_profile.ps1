@@ -19,19 +19,13 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 $adminSuffix = if ($isAdmin) { " [ADMIN]" } else { "" }
 $Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix ..." -f $PSVersionTable.PSVersion.ToString()
 
-function Get-ProfileDir {
-    if ($PSVersionTable.PSEdition -eq "Core") {
-        return [Environment]::GetFolderPath("MyDocuments") + "\PowerShell"
-    } elseif ($PSVersionTable.PSEdition -eq "Desktop") {
-        return [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell"
-    } else {
-        Write-Error "Unsupported PowerShell edition: $($PSVersionTable.PSEdition)"
-        return $null
-    }
-}
-
 # ── Oh-My-Posh ──
-$localThemePath = Join-Path (Get-ProfileDir) "cobalt2.omp.json"
+$profileDir = if ($PSVersionTable.PSEdition -eq "Core") {
+    [Environment]::GetFolderPath("MyDocuments") + "\PowerShell"
+} else {
+    [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell"
+}
+$localThemePath = Join-Path $profileDir "cobalt2.omp.json"
 if (Test-Path $localThemePath) {
     oh-my-posh init pwsh --config $localThemePath | Invoke-Expression
 } else {
@@ -139,25 +133,8 @@ $Deferred = {
     # Overrides: must exist before sourcing CTT so its Get-Command checks find them
     function Get-Theme_Override { }             # oh-my-posh already loaded
     function Set-PredictionSource_Override { }   # PSReadLine already configured
-
-    # Update-Profile targets ctt-profile.ps1 instead of $PROFILE (our wrapper)
-    function Update-Profile_Override {
-        try {
-            $url = "$repo_root/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
-            $oldhash = Get-FileHash $global:CttProfilePath
-            Invoke-RestMethod $url -OutFile "$env:temp/Microsoft.PowerShell_profile.ps1"
-            $newhash = Get-FileHash "$env:temp/Microsoft.PowerShell_profile.ps1"
-            if ($newhash.Hash -ne $oldhash.Hash) {
-                Copy-Item -Path "$env:temp/Microsoft.PowerShell_profile.ps1" -Destination $global:CttProfilePath -Force
-                Write-Host "CTT profile updated. Restart your shell to reflect changes." -ForegroundColor Magenta
-            } else {
-                Write-Host "CTT profile is up to date." -ForegroundColor Green
-            }
-        } catch {
-            Write-Error "Unable to check for CTT profile updates: $_"
-        } finally {
-            Remove-Item "$env:temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
-        }
+    function Update-Profile_Override {          # prevent CTT from overwriting our wrapper
+        Write-Host "Use 'Update-Wrapper' to update this profile." -ForegroundColor Yellow
     }
 
     function Update-Wrapper {
