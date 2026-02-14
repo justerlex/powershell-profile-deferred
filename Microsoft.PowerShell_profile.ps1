@@ -7,7 +7,7 @@
 #  SYNCHRONOUS - runs immediately
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$global:ProfileStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
@@ -91,8 +91,8 @@ if ($host.Name -eq 'ConsoleHost') {
 #  DEFERRED - CTT profile loads in a background runspace
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$global:ProfileStopwatch.Stop()
-$syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
+$stopwatch.Stop()
+$syncMs = [math]::Round($stopwatch.Elapsed.TotalMilliseconds)
 
 # Show boot time inline on the PS version banner line, or below it as fallback
 $bootStatusText = "boot ${syncMs}ms | Type 'Show-Help' for commands"
@@ -160,9 +160,7 @@ $Deferred = {
             function Write-Host { }
             . $global:CttProfilePath
         } finally {
-            if (Test-Path Function:\Write-Host) {
-                Remove-Item Function:\Write-Host -ErrorAction SilentlyContinue
-            }
+            Remove-Item Function:\Write-Host -ErrorAction SilentlyContinue
         }
 
         if ($global:DeferredWrapperPrompt) {
@@ -174,7 +172,7 @@ $Deferred = {
 
     $global:ProfileFullyLoaded = $true
 
-    # Title: ... -> * -> clean
+    # Title: ... -> ok -> clean
     $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' \.\.\.$', ''
     $Host.UI.RawUI.WindowTitle = "$currentTitle ok"
     Start-Sleep -Seconds 1

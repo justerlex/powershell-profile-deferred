@@ -1,4 +1,4 @@
-### Deferred PowerShell Profile — One-Punch Installer
+### Deferred PowerShell Profile — Setup
 ### Installs ChrisTitusTech's PowerShell profile + a deferred-loading wrapper
 ### that drops your time-to-prompt from ~1-2s to ~200ms.
 ###
@@ -43,7 +43,7 @@ $Config = @{
 # Must run elevated — font install + choco need admin
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Warning "Please run this script as an Administrator!"
-    break
+    return
 }
 
 function Test-InternetConnection {
@@ -57,12 +57,12 @@ function Test-InternetConnection {
 }
 
 if (-not (Test-InternetConnection)) {
-    break
+    return
 }
 
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  Deferred PowerShell Profile — One-Punch Installer   " -ForegroundColor Cyan
+Write-Host "  Deferred PowerShell Profile — Setup                 " -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 
@@ -327,20 +327,23 @@ Write-Host "  Installed to:" -ForegroundColor White
 Write-Host "    PowerShell 7+  : $coreDir" -ForegroundColor DarkGray
 Write-Host "    PowerShell 5.1 : $desktopDir" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  File layout (each directory):" -ForegroundColor White
-Write-Host "    Microsoft.PowerShell_profile.ps1  <- deferred wrapper (yours)" -ForegroundColor DarkGray
-Write-Host "    ctt-profile.ps1                   <- CTT profile (auto-updates)" -ForegroundColor DarkGray
+Write-Host "  File layout (per directory):" -ForegroundColor White
+Write-Host "    Microsoft.PowerShell_profile.ps1  <- deferred wrapper" -ForegroundColor DarkGray
+Write-Host "    ctt-profile.ps1                   <- CTT profile" -ForegroundColor DarkGray
 Write-Host "    cobalt2.omp.json                  <- Oh My Posh theme" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  Dependencies installed:" -ForegroundColor White
+Write-Host "  Dependencies:" -ForegroundColor White
 Write-Host "    Oh My Posh, CaskaydiaCove NF, Meslo NF, Chocolatey," -ForegroundColor DarkGray
 Write-Host "    Terminal-Icons, zoxide, fzf, PSFzf" -ForegroundColor DarkGray
 Write-Host ""
+Write-Host "  Commands:" -ForegroundColor White
+Write-Host "    Update-Profile  - pull latest CTT code" -ForegroundColor Yellow
+Write-Host "    Update-Wrapper  - re-run this setup (updates wrapper + deps)" -ForegroundColor Yellow
+Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor White
 Write-Host "    1. Restart your terminal" -ForegroundColor DarkGray
-Write-Host "    2. Set your terminal font to 'MesloLGM Nerd Font' (or CaskaydiaCove NF)" -ForegroundColor DarkGray
+Write-Host "    2. Set font to 'MesloLGM Nerd Font' or 'CaskaydiaCove NF'" -ForegroundColor DarkGray
 Write-Host "    3. Prompt loads in ~200ms, everything else in ~1s" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  Run 'Update-Profile' anytime to pull the latest CTT code." -ForegroundColor Yellow
-Write-Host "  This wrapper is never overwritten by CTT updates." -ForegroundColor Yellow
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
