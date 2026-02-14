@@ -280,6 +280,89 @@ Install-Profile -ProfileDir $coreDir    -Edition "PowerShell 7+"
 Install-Profile -ProfileDir $desktopDir -Edition "Windows PowerShell 5.1"
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  WINDOWS TERMINAL — inject Flexoki color scheme + set as default
+# ═══════════════════════════════════════════════════════════════════════════════
+
+$FlexokiScheme = @{
+    background          = "#100F0F"
+    black               = "#100F0F"
+    blue                = "#205EA6"
+    brightBlack         = "#575653"
+    brightBlue          = "#4385BE"
+    brightCyan          = "#3AA99F"
+    brightGreen         = "#879A39"
+    brightPurple        = "#8B7EC8"
+    brightRed           = "#D14D41"
+    brightWhite         = "#FFFCF0"
+    brightYellow        = "#D0A215"
+    cursorColor         = "#DAD8CE"
+    cyan                = "#24837B"
+    foreground          = "#E6E4D9"
+    green               = "#66800B"
+    name                = "Flexoki"
+    purple              = "#5E409D"
+    red                 = "#AF3029"
+    selectionBackground = "#CECDC3"
+    white               = "#F2F0E5"
+    yellow              = "#C19C00"
+}
+
+# All known Windows Terminal settings.json locations
+$wtSettingsPaths = @(
+    "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+    "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json"
+    "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json"
+)
+
+$patchedAny = $false
+foreach ($wtPath in $wtSettingsPaths) {
+    if (-not (Test-Path $wtPath)) { continue }
+
+    Write-Host ""
+    Write-Host "Patching Windows Terminal at [$wtPath]..." -ForegroundColor Cyan
+
+    try {
+        $wtJson = Get-Content $wtPath -Raw | ConvertFrom-Json
+
+        # Ensure schemes array exists
+        if (-not $wtJson.schemes) {
+            $wtJson | Add-Member -MemberType NoteProperty -Name "schemes" -Value @()
+        }
+
+        # Check if Flexoki already present
+        $existing = $wtJson.schemes | Where-Object { $_.name -eq "Flexoki" }
+        if (-not $existing) {
+            $wtJson.schemes += [PSCustomObject]$FlexokiScheme
+            Write-Host "  Added Flexoki color scheme." -ForegroundColor Green
+        } else {
+            Write-Host "  Flexoki color scheme already present." -ForegroundColor Green
+        }
+
+        # Set Flexoki as default color scheme + CaskaydiaCove NF as default font
+        if (-not $wtJson.profiles.defaults) {
+            $wtJson.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value ([PSCustomObject]@{})
+        }
+        $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "colorScheme" -Value "Flexoki" -Force
+        if (-not $wtJson.profiles.defaults.font) {
+            $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value ([PSCustomObject]@{ face = "CaskaydiaCove NF" })
+        }
+        Write-Host "  Set Flexoki as default color scheme." -ForegroundColor Green
+
+        $wtJson | ConvertTo-Json -Depth 32 | Set-Content $wtPath -Encoding UTF8
+        Write-Host "  Windows Terminal settings saved." -ForegroundColor Green
+        $patchedAny = $true
+    } catch {
+        Write-Warning "  Failed to patch Windows Terminal: $_"
+    }
+}
+
+if (-not $patchedAny) {
+    Write-Host ""
+    Write-Host "  Windows Terminal settings.json not found — skipping color scheme." -ForegroundColor DarkGray
+    Write-Host "  (Install Windows Terminal first, then re-run setup to apply Flexoki.)" -ForegroundColor DarkGray
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  DONE
 # ═══════════════════════════════════════════════════════════════════════════════
 

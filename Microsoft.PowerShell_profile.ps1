@@ -432,6 +432,9 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
     function global:cpy { Set-Clipboard $args[0] }
     function global:pst { Get-Clipboard }
 
+    # System Info
+    function global:ffe { fastfetch }
+
     # ── Argument Completers ──
     $scriptblock = {
         param($wordToComplete, $commandAst, $cursorPosition)
@@ -559,6 +562,8 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         Write-Host " - Chris Titus WinUtil (dev)" -ForegroundColor Gray
         Write-Host "  Clear-Cache" -ForegroundColor Green -NoNewline
         Write-Host " - Clear temp/prefetch/IE cache" -ForegroundColor Gray
+        Write-Host "  ffe" -ForegroundColor Green -NoNewline
+        Write-Host " - System info (fastfetch)" -ForegroundColor Gray
         Write-Host ""
         Write-Host "Use 'Show-Help' to display this help message." -ForegroundColor Magenta
         Write-Host ""
