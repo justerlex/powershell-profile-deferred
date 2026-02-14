@@ -5,7 +5,7 @@
 ###   irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ###
 ### WHAT IT DOES:
-###   1. Installs dependencies (Oh My Posh, Nerd Font, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch)
+###   1. Installs dependencies (Oh My Posh, Iosevkata + CaskaydiaCove Nerd Fonts, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch)
 ###   2. Downloads the profile into both PowerShell 7+ and 5.1 directories
 ###   3. Injects the Flexoki color scheme into Windows Terminal
 ###   4. Backs up existing profiles before overwriting
@@ -17,12 +17,15 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $Config = @{
-    RepoRoot        = "https://raw.githubusercontent.com/justerlex/powershell-profile-deferred/main"
-    OmpThemeName    = "cobalt2"
-    OmpThemeUrl     = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/cobalt2.omp.json"
-    FontName        = "CascadiaCode"
-    FontDisplayName = "CaskaydiaCove NF"
-    FontVersion     = "3.2.1"
+    RepoRoot              = "https://raw.githubusercontent.com/justerlex/powershell-profile-deferred/main"
+    OmpThemeName          = "cobalt2"
+    OmpThemeUrl           = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/cobalt2.omp.json"
+    FontName              = "CascadiaCode"
+    FontDisplayName       = "CaskaydiaCove NF"
+    FontVersion           = "3.2.1"
+    IosevkataApi          = "https://api.github.com/repos/ningw42/Iosevkata/releases/latest"
+    IosevkataDisplayName  = "Iosevkata Nerd Font"
+    DefaultFont           = "Iosevkata Nerd Font"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -50,7 +53,7 @@ Write-Host ""
 #  DEPENDENCIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$totalSteps = 7
+$totalSteps = 8
 
 # [1] Oh My Posh
 Write-Host "[1/$totalSteps] Oh My Posh..." -ForegroundColor Yellow
@@ -93,8 +96,41 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [3] Chocolatey
-Write-Host "[3/$totalSteps] Chocolatey..." -ForegroundColor Yellow
+# [3] Iosevkata Nerd Font (default)
+Write-Host "[3/$totalSteps] Iosevkata Nerd Font..." -ForegroundColor Yellow
+try {
+    [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
+    $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
+
+    if ($fontFamilies -notcontains $Config.IosevkataDisplayName) {
+        $release = Invoke-RestMethod -Uri $Config.IosevkataApi
+        $tag = $release.tag_name
+        $fontZipUrl = "https://github.com/ningw42/Iosevkata/releases/download/$tag/IosevkataNerdFont-$tag.zip"
+        $zipPath = "$env:TEMP\IosevkataNerdFont.zip"
+        $extractPath = "$env:TEMP\IosevkataNerdFont"
+
+        Invoke-WebRequest -Uri $fontZipUrl -OutFile $zipPath
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+        $destination = (New-Object -ComObject Shell.Application).Namespace(0x14)
+        Get-ChildItem -Path $extractPath -Recurse -Filter "*.ttf" | ForEach-Object {
+            if (-not (Test-Path "C:\Windows\Fonts\$($_.Name)")) {
+                $destination.CopyHere($_.FullName, 0x10)
+            }
+        }
+
+        Remove-Item $extractPath -Recurse -Force
+        Remove-Item $zipPath -Force
+        Write-Host "  Done." -ForegroundColor Green
+    } else {
+        Write-Host "  Already installed." -ForegroundColor Green
+    }
+} catch {
+    Write-Error "  Failed: $_"
+}
+
+# [4] Chocolatey
+Write-Host "[4/$totalSteps] Chocolatey..." -ForegroundColor Yellow
 try {
     if (Get-Command choco -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -108,8 +144,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [4] Terminal-Icons
-Write-Host "[4/$totalSteps] Terminal-Icons..." -ForegroundColor Yellow
+# [5] Terminal-Icons
+Write-Host "[5/$totalSteps] Terminal-Icons..." -ForegroundColor Yellow
 try {
     if (Get-Module -ListAvailable -Name Terminal-Icons) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -121,8 +157,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [5] zoxide
-Write-Host "[5/$totalSteps] zoxide..." -ForegroundColor Yellow
+# [6] zoxide
+Write-Host "[6/$totalSteps] zoxide..." -ForegroundColor Yellow
 try {
     if (Get-Command zoxide -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -134,8 +170,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [6] fzf + PSFzf
-Write-Host "[6/$totalSteps] fzf + PSFzf..." -ForegroundColor Yellow
+# [7] fzf + PSFzf
+Write-Host "[7/$totalSteps] fzf + PSFzf..." -ForegroundColor Yellow
 try {
     if (-not (Get-Command fzf -ErrorAction SilentlyContinue)) {
         winget install -e --accept-source-agreements --accept-package-agreements junegunn.fzf
@@ -148,8 +184,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [7] fastfetch
-Write-Host "[7/$totalSteps] fastfetch..." -ForegroundColor Yellow
+# [8] fastfetch
+Write-Host "[8/$totalSteps] fastfetch..." -ForegroundColor Yellow
 try {
     if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -269,7 +305,9 @@ foreach ($wtPath in $wtPaths) {
         }
         $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "colorScheme" -Value "Flexoki" -Force
         if (-not $wt.profiles.defaults.font) {
-            $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value ([PSCustomObject]@{ face = "CaskaydiaCove NF" })
+            $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value ([PSCustomObject]@{ face = $Config.DefaultFont })
+        } else {
+            $wt.profiles.defaults.font | Add-Member -MemberType NoteProperty -Name "face" -Value $Config.DefaultFont -Force
         }
 
         $wt | ConvertTo-Json -Depth 32 | Set-Content $wtPath -Encoding UTF8
