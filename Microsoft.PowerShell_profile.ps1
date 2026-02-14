@@ -114,38 +114,78 @@ $syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
 # If host/cursor APIs aren't available, fall back to the normal second-line output.
 $bootStatusText = "boot ${syncMs}ms | Type 'Show-Help' for commands"
 $bootStatusShown = $false
+$global:DeferredLoadError = $null
+$global:ProfileLoadCompleted = $false
 
-try {
-    $rawUi = $Host.UI.RawUI
-    $cursor = $rawUi.CursorPosition
-    $windowWidth = $rawUi.WindowSize.Width
-    $targetY = $cursor.Y - 1
-    $targetX = $windowWidth - $bootStatusText.Length - 1
 
-    if ($targetY -ge 0 -and $targetX -ge 0) {
-        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
-        Write-Host "boot " -NoNewline -ForegroundColor Cyan
-        Write-Host "$syncMs" -NoNewline -ForegroundColor Gray
-        Write-Host "ms" -NoNewline -ForegroundColor DarkGray
-        Write-Host " | " -NoNewline -ForegroundColor DarkGray
-        Write-Host "Type " -NoNewline -ForegroundColor DarkGray
-        Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
-        Write-Host " for commands" -NoNewline -ForegroundColor DarkGray
-        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates(0, $cursor.Y)
-        $bootStatusShown = $true
-    }
-} catch {
-    $bootStatusShown = $false
-}
+function Write-BootStatusLine {
+    param(
+        [Parameter(Mandatory)]
+        [long]$ElapsedMs,
+        [switch]$NoNewline
+    )
 
-if (-not $bootStatusShown) {
     Write-Host "boot " -NoNewline -ForegroundColor Cyan
-    Write-Host "$syncMs" -NoNewline -ForegroundColor Gray
+    Write-Host "$ElapsedMs" -NoNewline -ForegroundColor Gray
     Write-Host "ms" -NoNewline -ForegroundColor DarkGray
     Write-Host " | " -NoNewline -ForegroundColor DarkGray
     Write-Host "Type " -NoNewline -ForegroundColor DarkGray
     Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
-    Write-Host " for commands" -ForegroundColor DarkGray
+    Write-Host " for commands" -NoNewline:$NoNewline -ForegroundColor DarkGray
+}
+# Friendly placeholder while deferred profile functions are still loading.
+if (-not (Get-Command Show-Help -ErrorAction SilentlyContinue)) {
+    function Show-Help {
+        $currentShowHelp = Get-Command Show-Help -CommandType Function -ErrorAction SilentlyContinue
+        if ($currentShowHelp -and $currentShowHelp.ScriptBlock -ne $MyInvocation.MyCommand.ScriptBlock) {
+            & $currentShowHelp @args
+            return
+        }
+
+        if (-not $global:ProfileLoadCompleted) {
+            Write-Host "Show-Help is still loading in the background..." -ForegroundColor DarkGray
+            return
+        }
+
+        if ($global:DeferredLoadError -and $global:CttProfilePath -and (Test-Path $global:CttProfilePath)) {
+            . $global:CttProfilePath
+            $resolvedShowHelp = Get-Command Show-Help -CommandType Function -ErrorAction SilentlyContinue
+            if ($resolvedShowHelp -and $resolvedShowHelp.ScriptBlock -ne $MyInvocation.MyCommand.ScriptBlock) {
+                & $resolvedShowHelp @args
+                return
+            }
+        }
+
+        Write-Host "Show-Help is unavailable in this session." -ForegroundColor DarkGray
+    }
+}
+
+function Try-WriteBootStatusInline {
+    param([long]$ElapsedMs)
+
+    try {
+        $rawUi = $Host.UI.RawUI
+        $cursor = $rawUi.CursorPosition
+        $targetY = $cursor.Y - 1
+        $targetX = $rawUi.WindowSize.Width - $bootStatusText.Length - 1
+
+        if ($targetY -lt 0 -or $targetX -lt 0) {
+            return $false
+        }
+
+        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
+        Write-BootStatusLine -ElapsedMs $ElapsedMs -NoNewline
+        $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates(0, $cursor.Y)
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+$bootStatusShown = Try-WriteBootStatusInline -ElapsedMs $syncMs
+if (-not $bootStatusShown)
+{
+    Write-BootStatusLine -ElapsedMs $syncMs
 }
 
 
@@ -195,16 +235,26 @@ $Deferred = {
     # because PowerShell resolves command names at call time, not definition time.
     # When you run 'uptime' later, it finds the real Write-Host cmdlet.
     if (Test-Path $global:CttProfilePath) {
-        function Write-Host { }
-        . $global:CttProfilePath
-        Remove-Item Function:\Write-Host
+        try {
+            function Write-Host { }
+            . $global:CttProfilePath
+        } catch {
+            $global:DeferredLoadError = $_.Exception.Message
+            Write-Host "Deferred profile load failed: $global:DeferredLoadError" -ForegroundColor DarkGray
+        } finally {
+            if (Test-Path Function:\Write-Host) {
+                Remove-Item Function:\Write-Host -ErrorAction SilentlyContinue
+            }
+        }
+
 
         # CTT defines its own prompt. Restore the sync oh-my-posh prompt.
         if ($global:DeferredWrapperPrompt) {
             Set-Item Function:\prompt -Value $global:DeferredWrapperPrompt
         }
     } else {
-        Write-Warning "CTT profile not found at $global:CttProfilePath. Did you rename it?"
+        $global:DeferredLoadError = "CTT profile not found at $global:CttProfilePath"
+        Write-Host "$global:DeferredLoadError. Did you rename it?" -ForegroundColor DarkGray
     }
 
     # ── YOUR PERSONAL ADDITIONS ──
@@ -217,7 +267,9 @@ $Deferred = {
     #   Set-Alias -Name k -Value kubectl
 
     # Signal that everything is loaded
-    $global:ProfileFullyLoaded = $true
+    $global:ProfileLoadCompleted = $true
+    $global:ProfileFullyLoaded = (-not $global:DeferredLoadError)
+
 
     # Flash completion in window title (non-destructive, never stomps your prompt)
     # ⏳ → ✓ → clean
@@ -237,42 +289,6 @@ $Deferred = {
 $GlobalState = [psmoduleinfo]::new($false)
 $GlobalState.SessionState = $ExecutionContext.SessionState
 
-# Create a runspace attached to $Host (needed for Write-Host etc. in deferred code)
-$Runspace = [runspacefactory]::CreateRunspace($Host)
-$Powershell = [powershell]::Create($Runspace)
-$Runspace.Open()
-$Runspace.SessionStateProxy.PSVariable.Set('GlobalState', $GlobalState)
-
-# ── ArgumentCompleter Reflection Hack ──
-# Without this, Register-ArgumentCompleter calls in CTT's profile (git, npm, deno, dotnet)
-# would silently fail because completers are stored on the ExecutionContext, not SessionState.
-$Private = [Reflection.BindingFlags]'Instance, NonPublic'
-$ContextField = [Management.Automation.EngineIntrinsics].GetField('_context', $Private)
-$Context = $ContextField.GetValue($ExecutionContext)
-
-$ContextCACProperty = $Context.GetType().GetProperty('CustomArgumentCompleters', $Private)
-$ContextNACProperty = $Context.GetType().GetProperty('NativeArgumentCompleters', $Private)
-$CAC = $ContextCACProperty.GetValue($Context)
-$NAC = $ContextNACProperty.GetValue($Context)
-
-if ($null -eq $CAC) {
-    $CAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
-    $ContextCACProperty.SetValue($Context, $CAC)
-}
-if ($null -eq $NAC) {
-    $NAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
-    $ContextNACProperty.SetValue($Context, $NAC)
-}
-
-# Wire the runspace's ExecutionContext to share the same ArgumentCompleter dictionaries
-$RSEngineField = $Runspace.GetType().GetField('_engine', $Private)
-$RSEngine = $RSEngineField.GetValue($Runspace)
-$EngineContextField = $RSEngine.GetType().GetFields($Private) | Where-Object { $_.FieldType.Name -eq 'ExecutionContext' }
-$RSContext = $EngineContextField.GetValue($RSEngine)
-
-$ContextCACProperty.SetValue($RSContext, $CAC)
-$ContextNACProperty.SetValue($RSContext, $NAC)
-
 # ── Launch ──
 $Wrapper = {
     # The 200ms sleep is NOT optional. Without it you get:
@@ -284,8 +300,48 @@ $Wrapper = {
 
     . $GlobalState { . $Deferred; Remove-Variable Deferred }
 }
+try {
+    # Create a runspace attached to $Host (needed for Write-Host etc. in deferred code)
+    $Runspace = [runspacefactory]::CreateRunspace($Host)
+    $Powershell = [powershell]::Create($Runspace)
+    $Runspace.Open()
+    $Runspace.SessionStateProxy.PSVariable.Set('GlobalState', $GlobalState)
 
-$null = $Powershell.AddScript($Wrapper.ToString()).BeginInvoke()
+    # ── ArgumentCompleter Reflection Hack ──
+    # Without this, Register-ArgumentCompleter calls in CTT's profile (git, npm, deno, dotnet)
+    # would silently fail because completers are stored on the ExecutionContext, not SessionState.
+    $Private = [Reflection.BindingFlags]'Instance, NonPublic'
+    $ContextField = [Management.Automation.EngineIntrinsics].GetField('_context', $Private)
+    $Context = $ContextField.GetValue($ExecutionContext)
+
+    $ContextCACProperty = $Context.GetType().GetProperty('CustomArgumentCompleters', $Private)
+    $ContextNACProperty = $Context.GetType().GetProperty('NativeArgumentCompleters', $Private)
+    $CAC = $ContextCACProperty.GetValue($Context)
+    $NAC = $ContextNACProperty.GetValue($Context)
+
+    if ($null -eq $CAC) {
+        $CAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
+        $ContextCACProperty.SetValue($Context, $CAC)
+    }
+    if ($null -eq $NAC) {
+        $NAC = [Collections.Generic.Dictionary[string, scriptblock]]::new()
+        $ContextNACProperty.SetValue($Context, $NAC)
+    }
+
+    # Wire the runspace's ExecutionContext to share the same ArgumentCompleter dictionaries
+    $RSEngineField = $Runspace.GetType().GetField('_engine', $Private)
+    $RSEngine = $RSEngineField.GetValue($Runspace)
+    $EngineContextField = $RSEngine.GetType().GetFields($Private) | Where-Object { $_.FieldType.Name -eq 'ExecutionContext' }
+    $RSContext = $EngineContextField.GetValue($RSEngine)
+
+    $ContextCACProperty.SetValue($RSContext, $CAC)
+    $ContextNACProperty.SetValue($RSContext, $NAC)
+
+    $null = $Powershell.AddScript($Wrapper.ToString()).BeginInvoke()
+} catch {
+    # Host/runspace mismatch fallback: load directly so commands are always available.
+    . $Deferred
+}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DONE. prompt is live. CTT functions arrive within ~1 second.
