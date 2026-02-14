@@ -19,7 +19,7 @@ if ([bool]([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsSystem) 
 # Admin check + window title. you want this on screen immediately
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $adminSuffix = if ($isAdmin) { " [ADMIN]" } else { "" }
-$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix ⏳" -f $PSVersionTable.PSVersion.ToString()
+$Host.UI.RawUI.WindowTitle = "PowerShell {0}$adminSuffix [loading]" -f $PSVersionTable.PSVersion.ToString()
 
 # Helper (same as CTT's, needed for theme path)
 function Get-ProfileDir {
@@ -112,7 +112,7 @@ $syncMs = [math]::Round($global:ProfileStopwatch.Elapsed.TotalMilliseconds)
 
 # Try to render helper text on the right side of the startup banner line.
 # If host/cursor APIs aren't available, fall back to the normal second-line output.
-$bootStatusText = "⚡ ${syncMs}ms ┃ Type 'Show-Help' for commands"
+$bootStatusText = "[boot ${syncMs}ms] Type 'Show-Help' for commands"
 $bootStatusShown = $false
 
 try {
@@ -124,10 +124,10 @@ try {
 
     if ($targetY -ge 0 -and $targetX -ge 0) {
         $rawUi.CursorPosition = New-Object System.Management.Automation.Host.Coordinates($targetX, $targetY)
-        Write-Host "⚡ " -NoNewline -ForegroundColor Cyan
+        Write-Host "[boot " -NoNewline -ForegroundColor Cyan
         Write-Host "$syncMs" -NoNewline -ForegroundColor DarkGray
         Write-Host "ms" -NoNewline -ForegroundColor DarkGray
-        Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
+        Write-Host "] " -NoNewline -ForegroundColor DarkGray
         Write-Host "Type " -NoNewline -ForegroundColor DarkGray
         Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
         Write-Host " for commands" -NoNewline -ForegroundColor DarkGray
@@ -139,10 +139,10 @@ try {
 }
 
 if (-not $bootStatusShown) {
-    Write-Host "  ⚡ " -NoNewline -ForegroundColor Cyan
+    Write-Host "  [boot " -NoNewline -ForegroundColor Cyan
     Write-Host "$syncMs" -NoNewline -ForegroundColor DarkGray
     Write-Host "ms" -NoNewline -ForegroundColor DarkGray
-    Write-Host " ┃ " -NoNewline -ForegroundColor DarkGray
+    Write-Host "] " -NoNewline -ForegroundColor DarkGray
     Write-Host "Type " -NoNewline -ForegroundColor DarkGray
     Write-Host "'Show-Help'" -NoNewline -ForegroundColor Yellow
     Write-Host " for commands" -ForegroundColor DarkGray
@@ -221,8 +221,8 @@ $Deferred = {
 
     # Flash completion in window title (non-destructive, never stomps your prompt)
     # ⏳ → ✓ → clean
-    $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' ⏳$', ''
-    $Host.UI.RawUI.WindowTitle = "$currentTitle ✓"
+    $currentTitle = $Host.UI.RawUI.WindowTitle -replace ' \[loading\]$', ''
+    $Host.UI.RawUI.WindowTitle = "$currentTitle [ready]"
     Start-Sleep -Seconds 2
     $Host.UI.RawUI.WindowTitle = $currentTitle
 }
