@@ -69,6 +69,7 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 | <img src="https://img.shields.io/badge/-%233AA99F?style=flat-square" height="10"> | [fzf](https://github.com/junegunn/fzf) + [PSFzf](https://github.com/kelleyma49/PSFzf) | Fuzzy finder |
 | <img src="https://img.shields.io/badge/-%23D14D41?style=flat-square" height="10"> | [fastfetch](https://github.com/fastfetch-cli/fastfetch) | System info |
 | <img src="https://img.shields.io/badge/-%23D14D41?style=flat-square" height="10"> | [croc](https://github.com/schollz/croc) | File transfer |
+| <img src="https://img.shields.io/badge/-%23D14D41?style=flat-square" height="10"> | [pomo](https://github.com/Bahaaio/pomo) | Pomodoro  |
 
 ---
 

@@ -368,6 +368,8 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         Write-Host " - List processes by name" -ForegroundColor Gray
         Write-Host "  pkill <name>" -ForegroundColor Green -NoNewline
         Write-Host " - Kill processes by name" -ForegroundColor Gray
+        Write-Host "  pomo" -ForegroundColor Green -NoNewline
+        Write-Host " - Pomodoro timer (pomo)" -ForegroundColor Gray
         Write-Host "  pubip" -ForegroundColor Green -NoNewline
         Write-Host " - Show public IP" -ForegroundColor Gray
         Write-Host "  sed <f> <find> <rep>" -ForegroundColor Green -NoNewline

@@ -5,7 +5,7 @@
 ###   irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ###
 ### WHAT IT DOES:
-###   1. Installs dependencies (Windows Terminal, PowerShell 7, Oh My Posh, Iosevkata + CaskaydiaCove Nerd Fonts, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch, Git, croc)
+###   1. Installs dependencies (Windows Terminal, PowerShell 7, Oh My Posh, Iosevkata + CaskaydiaCove Nerd Fonts, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch, Git, croc, pomo)
 ###   2. Downloads the profile into both PowerShell 7+ and 5.1 directories
 ###   3. Injects the Flexoki color scheme into Windows Terminal
 ###   4. Backs up existing profiles before overwriting
@@ -53,7 +53,7 @@ Write-Host ""
 #  DEPENDENCIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$totalSteps = 12
+$totalSteps = 13
 
 # [1] Windows Terminal
 Write-Host "[1/$totalSteps] Windows Terminal..." -ForegroundColor Yellow
@@ -246,6 +246,19 @@ try {
         Write-Host "  Already installed." -ForegroundColor Green
     } else {
         winget install -e --accept-source-agreements --accept-package-agreements schollz.croc
+        Write-Host "  Done." -ForegroundColor Green
+    }
+} catch {
+    Write-Error "  Failed: $_"
+}
+
+# [13] pomo
+Write-Host "[13/$totalSteps] pomo..." -ForegroundColor Yellow
+try {
+    if (Get-Command pomo -ErrorAction SilentlyContinue) {
+        Write-Host "  Already installed." -ForegroundColor Green
+    } else {
+        winget install -e --accept-source-agreements --accept-package-agreements Bahaaio.pomo
         Write-Host "  Done." -ForegroundColor Green
     }
 } catch {
