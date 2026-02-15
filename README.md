@@ -32,7 +32,7 @@ Fork of [ChrisTitusTech/powershell-profile](https://github.com/ChrisTitusTech/po
 
 ⚡ **Deferred loading** — Oh My Posh + PSReadLine load synchronously, everything else defers via `PowerShell.OnIdle`<br>
 🔒 **Manual updates only** — Removed connectivity check and auto-update, saving ~200–500ms<br>
-🎨 **Dependencies & styling** — Opinionated styling + all dependencies (like `fzf`) + 144×34 default terminal size<br>
+🎨 **Dependencies & styling** — Opinionated styling + all dependencies (like `fzf`)<br>
 
 <div align="right">
 <kbd>> start typing right away, text will show once everything loads</kbd>
@@ -62,11 +62,11 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 | <img src="https://img.shields.io/badge/-%23D0A215?style=flat-square" height="10"> | [Flexoki](https://stephango.com/flexoki) | Color scheme (injected into Windows Terminal) |
 | <img src="https://img.shields.io/badge/-%238B7EC8?style=flat-square" height="10"> | [Chocolatey](https://chocolatey.org/) | Package manager |
 | <img src="https://img.shields.io/badge/-%238B7EC8?style=flat-square" height="10"> | [Terminal-Icons](https://github.com/devblackops/Terminal-Icons) | File icons in `ls` |
+| <img src="https://img.shields.io/badge/-%233AA99F?style=flat-square" height="10"> | [Git](https://git-scm.com/) | Version control |
 | <img src="https://img.shields.io/badge/-%233AA99F?style=flat-square" height="10"> | [zoxide](https://github.com/ajeetdsouza/zoxide) | Smarter `cd` |
 | <img src="https://img.shields.io/badge/-%233AA99F?style=flat-square" height="10"> | [fzf](https://github.com/junegunn/fzf) + [PSFzf](https://github.com/kelleyma49/PSFzf) | Fuzzy finder |
 | <img src="https://img.shields.io/badge/-%23D14D41?style=flat-square" height="10"> | [fastfetch](https://github.com/fastfetch-cli/fastfetch) | System info |
-| <img src="https://img.shields.io/badge/-%23575653?style=flat-square" height="10"> | [Git](https://git-scm.com/) | Version control |
-| <img src="https://img.shields.io/badge/-%23575653?style=flat-square" height="10"> | [croc](https://github.com/schollz/croc) | File transfer |
+| <img src="https://img.shields.io/badge/-%23D14D41?style=flat-square" height="10"> | [croc](https://github.com/schollz/croc) | File transfer |
 
 ---
 
@@ -74,8 +74,8 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 ```
 Documents/PowerShell/
-├── Microsoft.PowerShell_profile.ps1
-└── cobalt2.omp.json
+├── Microsoft.PowerShell_profile.ps1   # main profile (aliases, functions, deferred loading)
+└── cobalt2.omp.json                   # Oh My Posh prompt theme
 ```
 
 ---
@@ -87,8 +87,7 @@ Documents/PowerShell/
 | <kbd>Update-Profile</kbd> | Re-runs setup (dependencies + latest profile) |
 | <kbd>Update-PowerShell</kbd> | Checks GitHub for latest PS release, upgrades via winget |
 | <kbd>Edit-Profile</kbd> / <kbd>ep</kbd> | Opens the profile in your editor |
-| <kbd>inv</kbd> | Open file or folder (Invoke-Item) |
-| <kbd>wtr</kbd> | Weather in terminal (wttr.in) |
+
 
 
 <div align="right">
