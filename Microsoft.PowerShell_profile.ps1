@@ -151,7 +151,7 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
             ForEach-Object { $_.FullName }
     }
     function global:pubip { (Invoke-WebRequest http://ifconfig.me/ip).Content }
-    function global:wtr { curl "wttr.in" }
+    function global:wttr { curl "wttr.in" }
     Set-Alias -Name inv -Value Invoke-Item -Scope Global
     function global:winutil { Invoke-Expression (Invoke-RestMethod https://christitus.com/win) }
     function global:winutildev { Invoke-Expression (Invoke-RestMethod https://christitus.com/windev) }
@@ -388,7 +388,7 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         Write-Host " - Chris Titus WinUtil" -ForegroundColor Gray
         Write-Host "  winutildev" -ForegroundColor Green -NoNewline
         Write-Host " - Chris Titus WinUtil (dev)" -ForegroundColor Gray
-        Write-Host "  wtr" -ForegroundColor Green -NoNewline
+        Write-Host "  wttr" -ForegroundColor Green -NoNewline
         Write-Host " - Weather in terminal (wttr.in)" -ForegroundColor Gray
         Write-Host "  Clear-Cache" -ForegroundColor Green -NoNewline
         Write-Host " - Clear temp/prefetch/IE cache" -ForegroundColor Gray
