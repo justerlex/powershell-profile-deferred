@@ -56,6 +56,8 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 | | Tool | Purpose |
 |:---:|---|---|
+| <img src="https://img.shields.io/badge/-%234385BE?style=flat-square" height="10"> | [Windows Terminal](https://github.com/microsoft/terminal) | Terminal emulator |
+| <img src="https://img.shields.io/badge/-%234385BE?style=flat-square" height="10"> | [PowerShell 7](https://github.com/PowerShell/PowerShell) | Shell |
 | <img src="https://img.shields.io/badge/-%234385BE?style=flat-square" height="10"> | [Oh My Posh](https://ohmyposh.dev/) | Prompt engine (Cobalt2 theme) |
 | <img src="https://img.shields.io/badge/-%23879A39?style=flat-square" height="10"> | [Iosevkata NF](https://github.com/ningw42/Iosevkata) | Default nerd font |
 | <img src="https://img.shields.io/badge/-%23879A39?style=flat-square" height="10"> | [CaskaydiaCove NF](https://github.com/ryanoasis/nerd-fonts) | Fallback nerd font |

@@ -5,7 +5,7 @@
 ###   irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ###
 ### WHAT IT DOES:
-###   1. Installs dependencies (Oh My Posh, Iosevkata + CaskaydiaCove Nerd Fonts, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch, Git, croc)
+###   1. Installs dependencies (Windows Terminal, PowerShell 7, Oh My Posh, Iosevkata + CaskaydiaCove Nerd Fonts, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch, Git, croc)
 ###   2. Downloads the profile into both PowerShell 7+ and 5.1 directories
 ###   3. Injects the Flexoki color scheme into Windows Terminal
 ###   4. Backs up existing profiles before overwriting
@@ -53,10 +53,38 @@ Write-Host ""
 #  DEPENDENCIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$totalSteps = 10
+$totalSteps = 12
 
-# [1] Oh My Posh
-Write-Host "[1/$totalSteps] Oh My Posh..." -ForegroundColor Yellow
+# [1] Windows Terminal
+Write-Host "[1/$totalSteps] Windows Terminal..." -ForegroundColor Yellow
+try {
+    $wtPackage = winget list -e --id Microsoft.WindowsTerminal --accept-source-agreements 2>$null
+    if ($wtPackage -match "Microsoft.WindowsTerminal") {
+        Write-Host "  Already installed." -ForegroundColor Green
+    } else {
+        winget install -e --accept-source-agreements --accept-package-agreements Microsoft.WindowsTerminal
+        Write-Host "  Done." -ForegroundColor Green
+    }
+} catch {
+    Write-Error "  Failed: $_"
+}
+
+# [2] PowerShell 7
+Write-Host "[2/$totalSteps] PowerShell 7..." -ForegroundColor Yellow
+try {
+    $ps7 = winget list -e --id Microsoft.PowerShell 2>$null
+    if ($ps7 -match "Microsoft.PowerShell") {
+        Write-Host "  Already installed." -ForegroundColor Green
+    } else {
+        winget install -e --accept-source-agreements --accept-package-agreements Microsoft.PowerShell
+        Write-Host "  Done." -ForegroundColor Green
+    }
+} catch {
+    Write-Error "  Failed: $_"
+}
+
+# [3] Oh My Posh
+Write-Host "[3/$totalSteps] Oh My Posh..." -ForegroundColor Yellow
 try {
     winget install -e --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
@@ -65,8 +93,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [2] CaskaydiaCove Nerd Font
-Write-Host "[2/$totalSteps] CaskaydiaCove Nerd Font..." -ForegroundColor Yellow
+# [4] CaskaydiaCove Nerd Font
+Write-Host "[4/$totalSteps] CaskaydiaCove Nerd Font..." -ForegroundColor Yellow
 try {
     [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
     $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
@@ -96,8 +124,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [3] Iosevkata Nerd Font (default)
-Write-Host "[3/$totalSteps] Iosevkata Nerd Font..." -ForegroundColor Yellow
+# [5] Iosevkata Nerd Font (default)
+Write-Host "[5/$totalSteps] Iosevkata Nerd Font..." -ForegroundColor Yellow
 try {
     [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
     $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
@@ -129,8 +157,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [4] Chocolatey
-Write-Host "[4/$totalSteps] Chocolatey..." -ForegroundColor Yellow
+# [6] Chocolatey
+Write-Host "[6/$totalSteps] Chocolatey..." -ForegroundColor Yellow
 try {
     if (Get-Command choco -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -144,8 +172,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [5] Terminal-Icons
-Write-Host "[5/$totalSteps] Terminal-Icons..." -ForegroundColor Yellow
+# [7] Terminal-Icons
+Write-Host "[7/$totalSteps] Terminal-Icons..." -ForegroundColor Yellow
 try {
     if (Get-Module -ListAvailable -Name Terminal-Icons) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -157,8 +185,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [6] zoxide
-Write-Host "[6/$totalSteps] zoxide..." -ForegroundColor Yellow
+# [8] zoxide
+Write-Host "[8/$totalSteps] zoxide..." -ForegroundColor Yellow
 try {
     if (Get-Command zoxide -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -170,8 +198,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [7] fzf + PSFzf
-Write-Host "[7/$totalSteps] fzf + PSFzf..." -ForegroundColor Yellow
+# [9] fzf + PSFzf
+Write-Host "[9/$totalSteps] fzf + PSFzf..." -ForegroundColor Yellow
 try {
     if (-not (Get-Command fzf -ErrorAction SilentlyContinue)) {
         winget install -e --accept-source-agreements --accept-package-agreements junegunn.fzf
@@ -184,8 +212,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [8] fastfetch
-Write-Host "[8/$totalSteps] fastfetch..." -ForegroundColor Yellow
+# [10] fastfetch
+Write-Host "[10/$totalSteps] fastfetch..." -ForegroundColor Yellow
 try {
     if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -197,8 +225,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [9] Git
-Write-Host "[9/$totalSteps] Git..." -ForegroundColor Yellow
+# [11] Git
+Write-Host "[11/$totalSteps] Git..." -ForegroundColor Yellow
 try {
     if (Get-Command git -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -211,8 +239,8 @@ try {
     Write-Error "  Failed: $_"
 }
 
-# [10] croc
-Write-Host "[10/$totalSteps] croc..." -ForegroundColor Yellow
+# [12] croc
+Write-Host "[12/$totalSteps] croc..." -ForegroundColor Yellow
 try {
     if (Get-Command croc -ErrorAction SilentlyContinue) {
         Write-Host "  Already installed." -ForegroundColor Green
@@ -331,6 +359,13 @@ foreach ($wtPath in $wtPaths) {
             $wt.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value ([PSCustomObject]@{})
         }
         $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "colorScheme" -Value "Flexoki" -Force
+
+        # Default profile → PowerShell 7
+        $ps7Profile = $wt.profiles.list | Where-Object { $_.name -eq "PowerShell" -or $_.source -eq "Windows.Terminal.PowershellCore" } | Select-Object -First 1
+        if ($ps7Profile) {
+            $wt | Add-Member -MemberType NoteProperty -Name "defaultProfile" -Value $ps7Profile.guid -Force
+            Write-Host "  Default profile set to PowerShell 7." -ForegroundColor Green
+        }
 
         # Default terminal size 144x34
         if ($null -eq $wt.PSObject.Properties['initialCols']) {
