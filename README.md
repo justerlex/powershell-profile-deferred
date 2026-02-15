@@ -74,13 +74,16 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 ### Troubleshooting
 
+<div align="right">
+<sub>Run elevated  PowerShell.</sub>
+</div>
 
 ```cmd
 powershell -Command "Start-Process PowerShell -Verb RunAs"
 ```
 
 <div align="right">
-<sub>Run elevated  PowerShell.</sub>
+<sub>ExecutionPolicies fix.</sub>
 </div>
 
 ```powershell
@@ -88,9 +91,6 @@ Set-ExecutionPolicy Unrestricted -Scope Process -Force # Allow scripts for curre
 Set-ExecutionPolicy Unrestricted # Allow scripts in general [not-so-safe]
 ```
 
-<div align="right">
-<sub>ExecutionPolicies fix.</sub>
-</div>
 
 ---
 
