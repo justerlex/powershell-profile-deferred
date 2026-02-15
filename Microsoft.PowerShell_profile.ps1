@@ -151,6 +151,8 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
             ForEach-Object { $_.FullName }
     }
     function global:pubip { (Invoke-WebRequest http://ifconfig.me/ip).Content }
+    function global:wtr { curl "wttr.in" }
+    Set-Alias -Name inv -Value Invoke-Item -Scope Global
     function global:winutil { Invoke-Expression (Invoke-RestMethod https://christitus.com/win) }
     function global:winutildev { Invoke-Expression (Invoke-RestMethod https://christitus.com/windev) }
 
@@ -322,6 +324,8 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         Write-Host ""
         Write-Host "Utilities" -ForegroundColor Cyan
         Write-Host "=======================" -ForegroundColor Yellow
+        Write-Host "  croc" -ForegroundColor Green -NoNewline
+        Write-Host " - File transfer (croc)" -ForegroundColor Gray
         Write-Host "  cpy <text>" -ForegroundColor Green -NoNewline
         Write-Host " - Copy to clipboard" -ForegroundColor Gray
         Write-Host "  pst" -ForegroundColor Green -NoNewline
@@ -344,6 +348,8 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         Write-Host " - Search text in files" -ForegroundColor Gray
         Write-Host "  hb <file>" -ForegroundColor Green -NoNewline
         Write-Host " - Upload to hastebin" -ForegroundColor Gray
+        Write-Host "  inv <path>" -ForegroundColor Green -NoNewline
+        Write-Host " - Open file/folder (Invoke-Item)" -ForegroundColor Gray
         Write-Host "  head <path> [n]" -ForegroundColor Green -NoNewline
         Write-Host " - First n lines (default 10)" -ForegroundColor Gray
         Write-Host "  tail <path> [n]" -ForegroundColor Green -NoNewline
@@ -382,6 +388,8 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         Write-Host " - Chris Titus WinUtil" -ForegroundColor Gray
         Write-Host "  winutildev" -ForegroundColor Green -NoNewline
         Write-Host " - Chris Titus WinUtil (dev)" -ForegroundColor Gray
+        Write-Host "  wtr" -ForegroundColor Green -NoNewline
+        Write-Host " - Weather in terminal (wttr.in)" -ForegroundColor Gray
         Write-Host "  Clear-Cache" -ForegroundColor Green -NoNewline
         Write-Host " - Clear temp/prefetch/IE cache" -ForegroundColor Gray
         Write-Host ""

@@ -5,7 +5,7 @@
 ###   irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ###
 ### WHAT IT DOES:
-###   1. Installs dependencies (Oh My Posh, Iosevkata + CaskaydiaCove Nerd Fonts, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch)
+###   1. Installs dependencies (Oh My Posh, Iosevkata + CaskaydiaCove Nerd Fonts, Chocolatey, Terminal-Icons, zoxide, fzf, fastfetch, Git, croc)
 ###   2. Downloads the profile into both PowerShell 7+ and 5.1 directories
 ###   3. Injects the Flexoki color scheme into Windows Terminal
 ###   4. Backs up existing profiles before overwriting
@@ -53,7 +53,7 @@ Write-Host ""
 #  DEPENDENCIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$totalSteps = 8
+$totalSteps = 10
 
 # [1] Oh My Posh
 Write-Host "[1/$totalSteps] Oh My Posh..." -ForegroundColor Yellow
@@ -197,6 +197,33 @@ try {
     Write-Error "  Failed: $_"
 }
 
+# [9] Git
+Write-Host "[9/$totalSteps] Git..." -ForegroundColor Yellow
+try {
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        Write-Host "  Already installed." -ForegroundColor Green
+    } else {
+        winget install -e --accept-source-agreements --accept-package-agreements Git.Git
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+        Write-Host "  Done." -ForegroundColor Green
+    }
+} catch {
+    Write-Error "  Failed: $_"
+}
+
+# [10] croc
+Write-Host "[10/$totalSteps] croc..." -ForegroundColor Yellow
+try {
+    if (Get-Command croc -ErrorAction SilentlyContinue) {
+        Write-Host "  Already installed." -ForegroundColor Green
+    } else {
+        winget install -e --accept-source-agreements --accept-package-agreements schollz.croc
+        Write-Host "  Done." -ForegroundColor Green
+    }
+} catch {
+    Write-Error "  Failed: $_"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PROFILE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -304,6 +331,19 @@ foreach ($wtPath in $wtPaths) {
             $wt.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value ([PSCustomObject]@{})
         }
         $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "colorScheme" -Value "Flexoki" -Force
+
+        # Default terminal size 144x34
+        if ($null -eq $wt.PSObject.Properties['initialCols']) {
+            $wt | Add-Member -MemberType NoteProperty -Name "initialCols" -Value 144 -Force
+        } else {
+            $wt.initialCols = 144
+        }
+        if ($null -eq $wt.PSObject.Properties['initialRows']) {
+            $wt | Add-Member -MemberType NoteProperty -Name "initialRows" -Value 34 -Force
+        } else {
+            $wt.initialRows = 34
+        }
+
         if (-not $wt.profiles.defaults.font) {
             $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value ([PSCustomObject]@{ face = $Config.DefaultFont })
         } else {
