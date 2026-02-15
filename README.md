@@ -1,12 +1,30 @@
-<div align="center">
+<div align="left">
 
 [![pwsh 7+](https://img.shields.io/badge/pwsh_7+-4385BE?style=flat-square&logo=powershell&logoColor=white)](#)&nbsp;
 [![Flexoki](https://img.shields.io/badge/Flexoki-D0A215?style=flat-square&logo=windowsterminal&logoColor=white)](#)&nbsp;
 [![Iosevkata](https://img.shields.io/badge/Iosevkata_NF-879A39?style=flat-square&logo=fontsquirrel&logoColor=white)](#)&nbsp;
 [![MIT](https://img.shields.io/badge/MIT-8B7EC8?style=flat-square)](#)
 
-Fork of [ChrisTitusTech/powershell-profile](https://github.com/ChrisTitusTech/powershell-profile)<br>
-**Deferred loading · No network on startup · Full dependencies setup**
+</div>
+
+</div>
+
+<div align="center">
+  
+```
+-------------------------------------------------------------------------------------
+  ╺┳┓┏━╸┏━╸┏━╸┏━┓┏━┓┏━╸╺┳┓   ┏━┓┏━┓╻ ╻┏━╸┏━┓┏━┓╻ ╻┏━╸╻  ╻     ┏━┓┏━┓┏━┓┏━╸╻╻  ┏━╸
+   ┃┃┣╸ ┣╸ ┣╸ ┣┳┛┣┳┛┣╸  ┃┃   ┣━┛┃ ┃┃╻┃┣╸ ┣┳┛┗━┓┣━┫┣╸ ┃  ┃     ┣━┛┣┳┛┃ ┃┣╸ ┃┃  ┣╸ 
+  ╺┻┛┗━╸╹  ┗━╸╹┗╸╹┗╸┗━╸╺┻┛   ╹  ┗━┛┗┻┛┗━╸╹┗╸┗━┛╹ ╹┗━╸┗━╸┗━╸   ╹  ╹┗╸┗━┛╹  ╹┗━╸┗━╸
+-------------------------------------------------------------------------------------
+```
+
+</div>
+
+<div align="right">
+  
+**Deferred loading · No network on startup · Full dependencies setup**<br>
+Fork of [ChrisTitusTech/powershell-profile](https://github.com/ChrisTitusTech/powershell-profile)
 
 </div>
 
@@ -14,8 +32,13 @@ Fork of [ChrisTitusTech/powershell-profile](https://github.com/ChrisTitusTech/po
 
 ### What changed
 
-- **Deferred loading** -- Oh My Posh + PSReadLine load synchronously (~200ms), everything else defers via `PowerShell.OnIdle`
-- **No network on startup** -- removed connectivity check and auto-update (200-500ms), updates are manual via `Update-Profile` / `Update-PowerShell`
+⚡ **Deferred loading** — Oh My Posh + PSReadLine load synchronously, everything else defers via `PowerShell.OnIdle`<br>
+🔒 **Manual updates only** — Removed connectivity check and auto-update, saving ~200–500ms<br>
+🎨 **Dependencies & styling** — Opinionated styling + all dependencies (like `fzf`)<br>
+
+<div align="right">
+<kbd>> start typing right away, text will show once everything loads</kbd>
+</div>
 
 ---
 
@@ -25,11 +48,13 @@ Fork of [ChrisTitusTech/powershell-profile](https://github.com/ChrisTitusTech/po
 irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ```
 
-> Elevated PowerShell required. Idempotent -- safe to re-run.
+<div align="right">
+<sub>Elevated PowerShell required.</sub>
+</div>
 
 ---
 
-### Dependencies
+### Bundled
 
 | | Tool | Purpose |
 |:---:|---|---|
@@ -45,7 +70,7 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 ---
 
-### Layout
+### Settings
 
 ```
 Documents/PowerShell/
@@ -63,7 +88,13 @@ Documents/PowerShell/
 | <kbd>Update-PowerShell</kbd> | Checks GitHub for latest PS release, upgrades via winget |
 | <kbd>Edit-Profile</kbd> / <kbd>ep</kbd> | Opens the profile in your editor |
 
-Drop a `profile.ps1` next to the main profile for personal additions -- it gets sourced automatically.
+
+<div align="right">
+  
+  <sub>Drop a `profile.ps1` next to the main profile for personal additions -- it gets sourced automatically.</sub>
+  
+</div>
+
 
 ---
 
