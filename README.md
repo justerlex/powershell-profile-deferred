@@ -72,6 +72,28 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 ---
 
+### Troubleshooting
+
+
+```cmd
+powershell -Command "Start-Process PowerShell -Verb RunAs"
+```
+
+<div align="right">
+<sub>Run elevated  PowerShell.</sub>
+</div>
+
+```powershell
+Set-ExecutionPolicy Unrestricted -Scope Process -Force # Allow scripts for current window [safe]
+Set-ExecutionPolicy Unrestricted # Allow scripts in general [not-so-safe]
+```
+
+<div align="right">
+<sub>ExecutionPolicies fix.</sub>
+</div>
+
+---
+
 ### Settings
 
 ```
@@ -87,7 +109,7 @@ Documents/PowerShell/
 | Command | Action |
 |---|---|
 | <kbd>Update-Profile</kbd> | Re-runs setup (dependencies + latest profile) |
-| <kbd>Update-PowerShell</kbd> | Checks GitHub for latest PS release, upgrades via winget |
+| <kbd>Update-PowerShell</kbd> | Checks GitHub for latest PS release |
 | <kbd>Edit-Profile</kbd> / <kbd>ep</kbd> | Opens the profile in your editor |
 
 
