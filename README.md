@@ -1,87 +1,64 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/PowerShell-5.1%20%7C%207%2B-5391FE?style=for-the-badge&logo=powershell&logoColor=white" alt="PowerShell">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Fork%20of-ChrisTitusTech%20Powershell%20Profile-orange?style=for-the-badge" alt="CTT Fork">
+  <img src="https://img.shields.io/badge/pwsh-7+-1f1f1f?style=flat-square&logo=powershell&logoColor=5391FE" alt="PowerShell">
+  <img src="https://img.shields.io/badge/license-MIT-1f1f1f?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/fork-ChrisTitusTech%2Fpowershell--profile-1f1f1f?style=flat-square" alt="Fork">
 </p>
 
-# PowerShell Profile
+# powershell-profile-deferred
 
-A fork of [ChrisTitusTech's PowerShell profile](https://github.com/ChrisTitusTech/powershell-profile) with performance optimizations and a one-punch setup that installs all dependencies in a single run.
+Fork of [ChrisTitusTech/powershell-profile](https://github.com/ChrisTitusTech/powershell-profile). Deferred loading, no startup network calls, full dependencies setup.
 
-Changes from upstream:
-- **No startup network calls** — removed the GitHub connectivity check and automatic update checks that add 200-500ms to every shell launch
-- **Deferred loading** — Oh My Posh and PSReadLine load synchronously (~200ms), everything else (Terminal-Icons, zoxide, utility functions) defers via `PowerShell.OnIdle` so the prompt appears instantly
-- **PS 5.1 compatible Show-Help** — uses `Write-Host` colors instead of `$PSStyle`
-- **Manual updates only** — `Update-Profile` and `Update-PowerShell` are commands you run when you want, not things that surprise you on startup
-- **fastfetch** included in the setup
+## What changed
 
----
+- **Deferred loading** -- Oh My Posh + PSReadLine load synchronously (~200ms), everything else defers via `PowerShell.OnIdle`
+- **No network on startup** -- removed connectivity check and auto-update (200-500ms), updates are manual via `Update-Profile` / `Update-PowerShell`
 
-## One-Line Install
+## Install
 
 ```powershell
 irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1" | iex
 ```
 
-> Run in an **elevated** PowerShell. Works on clean machines and machines with CTT's profile already installed.
+Requires **elevated** PowerShell. Idempotent -- safe to re-run.
 
----
+## Dependencies
 
-## What Gets Installed
-
-| Dependency | What it does |
+| Tool | Purpose |
 |---|---|
-| [Oh My Posh](https://ohmyposh.dev/) | Prompt engine + Cobalt2 theme |
-| [CaskaydiaCove NF](https://github.com/ryanoasis/nerd-fonts) | Nerd Font |
+| [Oh My Posh](https://ohmyposh.dev/) | Prompt engine (Cobalt2 theme) |
+| [Iosevkata NF](https://github.com/ningw42/Iosevkata) | Default nerd font |
+| [CaskaydiaCove NF](https://github.com/ryanoasis/nerd-fonts) | Fallback nerd font |
 | [Chocolatey](https://chocolatey.org/) | Package manager |
-| [Terminal-Icons](https://github.com/devblackops/Terminal-Icons) | File icons in `ls` output |
+| [Terminal-Icons](https://github.com/devblackops/Terminal-Icons) | File icons in `ls` |
 | [zoxide](https://github.com/ajeetdsouza/zoxide) | Smarter `cd` |
-| [fzf](https://github.com/junegunn/fzf) + [PSFzf](https://github.com/kelleyma49/PSFzf) | Fuzzy finder + PS integration |
-| [fastfetch](https://github.com/fastfetch-cli/fastfetch) | System info display |
+| [fzf](https://github.com/junegunn/fzf) + [PSFzf](https://github.com/kelleyma49/PSFzf) | Fuzzy finder |
+| [fastfetch](https://github.com/fastfetch-cli/fastfetch) | System info |
+| [Flexoki](https://stephango.com/flexoki) | Color scheme (injected into Windows Terminal) |
 
-Setup also injects the [Flexoki](https://stephango.com/flexoki) color scheme into Windows Terminal and sets CaskaydiaCove NF as the default font.
-
-All steps are idempotent. Safe to re-run, skips anything already installed.
-
----
-
-## File Layout
-
-After install, each PowerShell profile directory (`Documents\PowerShell` and `Documents\WindowsPowerShell`) contains:
+## Layout
 
 ```
-PowerShell/
-  Microsoft.PowerShell_profile.ps1   <- the profile
-  cobalt2.omp.json                   <- Oh My Posh theme
+Documents/PowerShell/
+  Microsoft.PowerShell_profile.ps1
+  cobalt2.omp.json
 ```
-
----
-
-## Customization
-
-Edit the profile directly — it's yours. Run `Edit-Profile` or `ep` to open it in your configured editor.
-
-If you want to keep personal additions separate from the main profile, create a `profile.ps1` file in the same directory. It gets sourced automatically at the end.
-
----
 
 ## Updating
 
-| Command | What it does |
+| Command | Action |
 |---|---|
-| `Update-Profile` | Re-runs setup (checks dependencies + downloads latest profile) |
-| `Update-PowerShell` | Checks GitHub for the latest PowerShell release and upgrades via winget |
+| `Update-Profile` | Re-runs setup (dependencies + latest profile) |
+| `Update-PowerShell` | Checks GitHub for latest PS release, upgrades via winget |
 
-Both are manual — nothing runs automatically on startup.
+## Customizing
 
----
+`Edit-Profile` / `ep` opens the profile in your editor. Drop a `profile.ps1` next to it for personal additions -- it gets sourced automatically.
 
 ## Credits
 
-- **[ChrisTitusTech](https://github.com/ChrisTitusTech/powershell-profile)** for the original profile
+- [ChrisTitusTech](https://github.com/ChrisTitusTech/powershell-profile) -- original profile
+- [Flexoki](https://stephango.com/flexoki) -- color scheme
+- [Iosevkata](https://github.com/ningw42/Iosevkata) -- default font
+- [Oh My Posh](https://ohmyposh.dev/) -- prompt engine
 
----
-
-<p align="center">
-  <sub>MIT License. Do whatever you want with it.</sub>
-</p>
+<p align="center"><sub>MIT</sub></p>
