@@ -74,6 +74,15 @@ irm "https://github.com/justerlex/powershell-profile-deferred/raw/main/setup.ps1
 
 ### Troubleshooting
 
+```powershell
+[System.Environment]::SetEnvironmentVariable("YAZI_FILE_ONE", "C:\Program Files\Git\usr\bin\file.exe", "User")
+# Example of adding path to git's file(1), for proper Yazi mime typing
+```
+
+<div align="right">
+<sub>In case you need to add something to PATH.</sub>
+</div>
+<br>
 
 ```cmd
 powershell -Command "Start-Process PowerShell -Verb RunAs"
