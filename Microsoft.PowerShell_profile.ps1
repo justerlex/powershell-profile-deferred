@@ -122,8 +122,17 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
             $upgradeCheck = winget list --id Microsoft.PowerShell --upgrade-available 2>$null
             if ($upgradeCheck -match "Microsoft\.PowerShell") {
                 Write-Host "Updating PowerShell..." -ForegroundColor Yellow
-                winget upgrade --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements
-                Write-Host "PowerShell updated. Restart your shell to reflect changes." -ForegroundColor Magenta
+                $result = winget upgrade --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements 2>&1
+                if ($result -match "install technology is different") {
+                    Write-Host "Install technology mismatch detected. Reinstalling..." -ForegroundColor Yellow
+                    winget uninstall --id Microsoft.PowerShell --accept-source-agreements
+                    winget install --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements
+                }
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "PowerShell updated. Restart your shell to reflect changes." -ForegroundColor Magenta
+                } else {
+                    Write-Error "Update failed. Exit code: $LASTEXITCODE"
+                }
             } else {
                 Write-Host "PowerShell is up to date." -ForegroundColor Green
             }
