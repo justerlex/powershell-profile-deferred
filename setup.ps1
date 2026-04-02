@@ -72,11 +72,11 @@ try {
 # [2] PowerShell 7
 Write-Host "[2/$totalSteps] PowerShell 7..." -ForegroundColor Yellow
 try {
-    $ps7 = winget list -e --id Microsoft.PowerShell 2>$null
-    if ($ps7 -match "Microsoft.PowerShell") {
+    $ps7 = winget list --id Microsoft.PowerShell 2>$null
+    if ($ps7 -match "Microsoft\.PowerShell") {
         Write-Host "  Already installed." -ForegroundColor Green
     } else {
-        winget install -e --accept-source-agreements --accept-package-agreements Microsoft.PowerShell
+        winget install --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements
         Write-Host "  Done." -ForegroundColor Green
     }
 } catch {

@@ -119,11 +119,10 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
     function global:Update-PowerShell {
         try {
             Write-Host "Checking for PowerShell updates..." -ForegroundColor Cyan
-            $currentVersion = $PSVersionTable.PSVersion.ToString()
-            $latestVersion = (Invoke-RestMethod "https://api.github.com/repos/PowerShell/PowerShell/releases/latest").tag_name.Trim('v')
-            if ($currentVersion -lt $latestVersion) {
+            $upgradeCheck = winget list --id Microsoft.PowerShell --upgrade-available 2>$null
+            if ($upgradeCheck -match "Microsoft\.PowerShell") {
                 Write-Host "Updating PowerShell..." -ForegroundColor Yellow
-                Start-Process powershell.exe -ArgumentList "-NoProfile -Command winget upgrade Microsoft.PowerShell --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow
+                winget upgrade --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements
                 Write-Host "PowerShell updated. Restart your shell to reflect changes." -ForegroundColor Magenta
             } else {
                 Write-Host "PowerShell is up to date." -ForegroundColor Green
