@@ -74,7 +74,19 @@ Write-Host "[2/$totalSteps] PowerShell 7..." -ForegroundColor Yellow
 try {
     $ps7 = winget list --id Microsoft.PowerShell 2>$null
     if ($ps7 -match "Microsoft\.PowerShell") {
-        Write-Host "  Already installed." -ForegroundColor Green
+        $upgradeCheck = winget list --id Microsoft.PowerShell --upgrade-available 2>$null
+        if ($upgradeCheck -match "Microsoft\.PowerShell") {
+            Write-Host "  Upgrading..." -ForegroundColor Yellow
+            $result = winget upgrade --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements 2>&1
+            if ($result -match "install technology is different") {
+                Write-Host "  Install technology mismatch. Reinstalling..." -ForegroundColor Yellow
+                winget uninstall --id Microsoft.PowerShell --accept-source-agreements
+                winget install --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements
+            }
+            Write-Host "  Done." -ForegroundColor Green
+        } else {
+            Write-Host "  Already up to date." -ForegroundColor Green
+        }
     } else {
         winget install --id Microsoft.PowerShell --source winget --accept-source-agreements --accept-package-agreements
         Write-Host "  Done." -ForegroundColor Green
