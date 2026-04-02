@@ -402,6 +402,8 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         Write-Host " - Weather in terminal (wttr.in)" -ForegroundColor Gray
         Write-Host "  Clear-Cache" -ForegroundColor Green -NoNewline
         Write-Host " - Clear temp/prefetch/IE cache" -ForegroundColor Gray
+        Write-Host "  zi" -ForegroundColor Green -NoNewline
+        Write-Host " - Interactive zoxide with fsf" -ForegroundColor Gray
         Write-Host ""
         Write-Host "Use 'Show-Help' to display this help message." -ForegroundColor Magenta
         Write-Host ""
