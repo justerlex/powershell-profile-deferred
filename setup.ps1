@@ -9,6 +9,8 @@
 ###   2. Downloads the profile into both PowerShell 7+ and 5.1 directories
 ###   3. Injects the Flexoki color scheme into Windows Terminal
 ###   4. Backs up existing profiles before overwriting
+###   5. Lets the profile run where a fresh Windows blocks scripts (ExecutionPolicy RemoteSigned, current user)
+###   6. Checks what landed and names what did not
 ###
 ### Safe to re-run — skips anything already installed.
 
@@ -22,7 +24,6 @@ $Config = @{
     OmpThemeUrl           = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/cobalt2.omp.json"
     FontName              = "CascadiaCode"
     FontDisplayName       = "CaskaydiaCove NF"
-    FontVersion           = "3.2.1"
     IosevkataApi          = "https://api.github.com/repos/ningw42/Iosevkata/releases/latest"
     IosevkataDisplayName  = "Iosevkata Nerd Font"
     DefaultFont           = "Iosevkata Nerd Font"
@@ -37,10 +38,8 @@ if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     return
 }
 
-try {
-    Test-Connection -ComputerName github.com -Count 1 -ErrorAction Stop | Out-Null
-} catch {
-    Write-Warning "Internet connection is required but not available."
+if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+    Write-Warning "winget is missing. Install 'App Installer' from the Microsoft Store, then run this again."
     return
 }
 
@@ -105,32 +104,29 @@ try {
     Write-Error "  Failed: $_"
 }
 
+# Fonts register under HKLM (all users) or HKCU (per user); value names start with the family name
+function Test-Font([string]$Name) {
+    $keys = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts", "HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+    [bool]((Get-Item $keys -ErrorAction SilentlyContinue).Property -like "$Name*")
+}
+
+# Oh My Posh's own installer (step 3): takes a Nerd Fonts name or a zip URL, no Shell COM dialogs
+function Install-Font([string]$Name, [string]$Source) {
+    oh-my-posh font install $Source
+    if (Test-Font $Name) {
+        Write-Host "  Done." -ForegroundColor Green
+    } else {
+        Write-Error "  $Name did not land (oh-my-posh font install $Source)."
+    }
+}
+
 # [4] CaskaydiaCove Nerd Font
 Write-Host "[4/$totalSteps] CaskaydiaCove Nerd Font..." -ForegroundColor Yellow
 try {
-    [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
-    $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
-
-    if ($fontFamilies -notcontains $Config.FontDisplayName) {
-        $fontZipUrl = "https://github.com/ryanoasis/nerd-fonts/releases/download/v$($Config.FontVersion)/$($Config.FontName).zip"
-        $zipPath = "$env:TEMP\$($Config.FontName).zip"
-        $extractPath = "$env:TEMP\$($Config.FontName)"
-
-        Invoke-WebRequest -Uri $fontZipUrl -OutFile $zipPath
-        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-
-        $destination = (New-Object -ComObject Shell.Application).Namespace(0x14)
-        Get-ChildItem -Path $extractPath -Recurse -Filter "*.ttf" | ForEach-Object {
-            if (-not (Test-Path "C:\Windows\Fonts\$($_.Name)")) {
-                $destination.CopyHere($_.FullName, 0x10)
-            }
-        }
-
-        Remove-Item $extractPath -Recurse -Force
-        Remove-Item $zipPath -Force
-        Write-Host "  Done." -ForegroundColor Green
-    } else {
+    if (Test-Font $Config.FontDisplayName) {
         Write-Host "  Already installed." -ForegroundColor Green
+    } else {
+        Install-Font $Config.FontDisplayName $Config.FontName
     }
 } catch {
     Write-Error "  Failed: $_"
@@ -139,31 +135,11 @@ try {
 # [5] Iosevkata Nerd Font (default)
 Write-Host "[5/$totalSteps] Iosevkata Nerd Font..." -ForegroundColor Yellow
 try {
-    [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
-    $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families.Name
-
-    if ($fontFamilies -notcontains $Config.IosevkataDisplayName) {
-        $release = Invoke-RestMethod -Uri $Config.IosevkataApi
-        $tag = $release.tag_name
-        $fontZipUrl = "https://github.com/ningw42/Iosevkata/releases/download/$tag/IosevkataNerdFont-$tag.zip"
-        $zipPath = "$env:TEMP\IosevkataNerdFont.zip"
-        $extractPath = "$env:TEMP\IosevkataNerdFont"
-
-        Invoke-WebRequest -Uri $fontZipUrl -OutFile $zipPath
-        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-
-        $destination = (New-Object -ComObject Shell.Application).Namespace(0x14)
-        Get-ChildItem -Path $extractPath -Recurse -Filter "*.ttf" | ForEach-Object {
-            if (-not (Test-Path "C:\Windows\Fonts\$($_.Name)")) {
-                $destination.CopyHere($_.FullName, 0x10)
-            }
-        }
-
-        Remove-Item $extractPath -Recurse -Force
-        Remove-Item $zipPath -Force
-        Write-Host "  Done." -ForegroundColor Green
-    } else {
+    if (Test-Font $Config.IosevkataDisplayName) {
         Write-Host "  Already installed." -ForegroundColor Green
+    } else {
+        $tag = (Invoke-RestMethod -Uri $Config.IosevkataApi).tag_name
+        Install-Font $Config.IosevkataDisplayName "https://github.com/ningw42/Iosevkata/releases/download/$tag/IosevkataNerdFont-$tag.zip"
     }
 } catch {
     Write-Error "  Failed: $_"
@@ -327,16 +303,53 @@ function Install-Profile {
             Invoke-RestMethod -Uri $Config.OmpThemeUrl -OutFile $themeFile
             Write-Host "  Theme installed." -ForegroundColor Green
         } catch {
-            Write-Warning "  Theme download failed — OMP will use remote fallback."
+            Write-Warning "  Theme download failed, OMP will use remote fallback."
         }
     }
 }
 
-$coreDir    = "$env:USERPROFILE\Documents\PowerShell"
-$desktopDir = "$env:USERPROFILE\Documents\WindowsPowerShell"
+# Documents may be redirected (OneDrive backup), so ask Windows instead of assuming %USERPROFILE%\Documents
+$documents  = [Environment]::GetFolderPath('MyDocuments')
+$coreDir    = Join-Path $documents "PowerShell"
+$desktopDir = Join-Path $documents "WindowsPowerShell"
 
 Install-Profile -ProfileDir $coreDir    -Edition "PowerShell 7+"
 Install-Profile -ProfileDir $desktopDir -Edition "Windows PowerShell 5.1"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  EXECUTION POLICY: a fresh Windows blocks every script file, the profile included
+# ═══════════════════════════════════════════════════════════════════════════════
+
+$problems = @()
+
+# Each edition keeps its own policy, so each one runs this itself: unblock if blocked, then report
+# what a fresh shell will really see (the Process scope is this session's, so it does not count).
+$hook = {
+    function Get-PersistedPolicy {
+        (Get-ExecutionPolicy -List | Where-Object { $_.Scope -ne 'Process' -and $_.ExecutionPolicy -ne 'Undefined' } | Select-Object -First 1).ExecutionPolicy
+    }
+    if ((Get-PersistedPolicy) -notin 'RemoteSigned', 'Unrestricted', 'Bypass') {
+        Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+    }
+    [PSCustomObject]@{ Profile = $PROFILE; Found = (Test-Path $PROFILE); Policy = "$(Get-PersistedPolicy)" }
+}
+
+# Chocolatey's installer leaves Bypass in this variable; children would inherit it and report a false pass
+Remove-Item Env:PSExecutionPolicyPreference -ErrorAction SilentlyContinue
+
+foreach ($edition in @{ Exe = "pwsh"; Name = "PowerShell 7+" }, @{ Exe = "powershell"; Name = "Windows PowerShell 5.1" }) {
+    if (-not (Get-Command $edition.Exe -ErrorAction SilentlyContinue)) {
+        $problems += "$($edition.Name): not installed"
+        continue
+    }
+    $state = & $edition.Exe -NoProfile -Command $hook
+    if (-not $state.Found) {
+        $problems += "$($edition.Name): no profile at $($state.Profile)"
+    }
+    if ($state.Policy -notin 'RemoteSigned', 'Unrestricted', 'Bypass') {
+        $problems += "$($edition.Name): execution policy '$($state.Policy)' still blocks the profile (group policy?)"
+    }
+}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  WINDOWS TERMINAL — Flexoki color scheme
@@ -356,6 +369,12 @@ $wtPaths = @(
     "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json"
     "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json"
 )
+
+# Terminal writes settings.json on its first launch. Installed but never opened = nothing to patch,
+# so seed a minimal file: Terminal layers it over its defaults and fills in the profile list itself.
+if (-not ($wtPaths | Where-Object { Test-Path $_ }) -and (Test-Path (Split-Path $wtPaths[0]))) {
+    '{ "profiles": {} }' | Set-Content $wtPaths[0] -Encoding UTF8
+}
 
 $patchedWT = $false
 foreach ($wtPath in $wtPaths) {
@@ -387,8 +406,13 @@ foreach ($wtPath in $wtPaths) {
 
         # Default profile → PowerShell 7
         $ps7Profile = $wt.profiles.list | Where-Object { $_.name -eq "PowerShell" -or $_.source -eq "Windows.Terminal.PowershellCore" } | Select-Object -First 1
-        if ($ps7Profile) {
-            $wt | Add-Member -MemberType NoteProperty -Name "defaultProfile" -Value $ps7Profile.guid -Force
+        $ps7Guid = if ($ps7Profile) {
+            $ps7Profile.guid
+        } elseif (Get-Command pwsh -ErrorAction SilentlyContinue) {
+            "{574e775e-4f2a-5b96-ac1e-a2962a402336}"   # the fixed GUID Terminal gives the PowerShell 7 profile it generates
+        }
+        if ($ps7Guid) {
+            $wt | Add-Member -MemberType NoteProperty -Name "defaultProfile" -Value $ps7Guid -Force
             Write-Host "  Default profile set to PowerShell 7." -ForegroundColor Green
         }
 
@@ -404,7 +428,10 @@ foreach ($wtPath in $wtPaths) {
             $wt.initialRows = 34
         }
 
-        if (-not $wt.profiles.defaults.font) {
+        # A face Terminal cannot find is a warning popup at every launch, so only name a font that landed
+        if (-not (Test-Font $Config.DefaultFont)) {
+            Write-Warning "  $($Config.DefaultFont) is not installed, font face left as is."
+        } elseif (-not $wt.profiles.defaults.font) {
             $wt.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value ([PSCustomObject]@{ face = $Config.DefaultFont })
         } else {
             $wt.profiles.defaults.font | Add-Member -MemberType NoteProperty -Name "face" -Value $Config.DefaultFont -Force
@@ -419,8 +446,11 @@ foreach ($wtPath in $wtPaths) {
 }
 
 if (-not $patchedWT) {
-    Write-Host ""
-    Write-Host "  Windows Terminal not found — skipping Flexoki." -ForegroundColor DarkGray
+    $problems += "Windows Terminal: no settings to patch. Open Terminal once, then run this again."
+}
+
+foreach ($font in $Config.IosevkataDisplayName, $Config.FontDisplayName) {
+    if (-not (Test-Font $font)) { $problems += "Font: $font is not installed" }
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -428,7 +458,12 @@ if (-not $patchedWT) {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Write-Host ""
-Write-Host "  Setup complete." -ForegroundColor Green
+if ($problems) {
+    Write-Host "  Setup finished, but not everything landed:" -ForegroundColor Red
+    $problems | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+} else {
+    Write-Host "  Setup complete. Profile, policy, fonts and Terminal all checked." -ForegroundColor Green
+}
 Write-Host ""
 Write-Host "  Profile directories:" -ForegroundColor White
 Write-Host "    $coreDir" -ForegroundColor DarkGray
